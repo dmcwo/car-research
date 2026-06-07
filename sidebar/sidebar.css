@@ -4,9 +4,9 @@
 :root {
   --bg: #f2f2f7;
   --surface: #ffffff;
-  --surface2: #f7f7fa;
-  --border: #d1d1d8;
-  --border-strong: #b0b0be;
+  --surface2: #ebebf2;
+  --border: #c8c8d4;
+  --border-strong: #a0a0b4;
   --accent: #4f3fd4;
   --accent-hover: #3e30b0;
   --accent-text: #ffffff;
@@ -17,15 +17,15 @@
   --text2: #3a3a4a;
   --muted: #5e5e72;
   --radius: 7px;
-  --shadow: 0 1px 3px rgba(0,0,0,.08);
+  --shadow: 0 1px 3px rgba(0,0,0,.07);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #1a1a28;
     --surface: #252535;
-    --surface2: #2e2e42;
-    --border: #3e3e56;
+    --surface2: #303048;
+    --border: #3e3e58;
     --border-strong: #5a5a78;
     --accent: #7c6af7;
     --accent-hover: #6a58e0;
@@ -94,8 +94,8 @@ body {
 
 /* ── Status bar ── */
 .status {
-  padding: 7px 14px;
-  font-size: 12px;
+  padding: 8px 14px;
+  font-size: 13px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   line-height: 1.4;
@@ -110,11 +110,12 @@ body {
   display: flex;
   flex-direction: column;
   flex: 1;
-  overflow: hidden;
+  min-height: 0; /* required for flex child scrolling in Firefox */
 }
 
 #fields-form {
   flex: 1;
+  min-height: 0; /* required for overflow-y: auto to work inside flex */
   overflow-y: auto;
   padding: 10px 12px;
   display: flex;
@@ -122,45 +123,62 @@ body {
   gap: 6px;
 }
 
-/* ── Field groups (collapsible) ── */
+/* ── Field groups (collapsible sections) ── */
+/* NOTE: No overflow:hidden here — Firefox clips <details> content inside flex
+   when the parent has overflow:hidden. Border-radius applied to children. */
 .field-group {
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  overflow: hidden;
   background: var(--surface);
   box-shadow: var(--shadow);
 }
 
 details.field-group > summary {
-  padding: 8px 11px;
+  padding: 10px 13px;
   cursor: pointer;
   font-weight: 700;
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--muted);
+  color: var(--text2);
   background: var(--surface2);
   user-select: none;
   list-style: none;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
+  border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
+  /* Rounded bottom corners when collapsed (no open content below) */
+  border-bottom: none;
+  transition: background 0.12s;
 }
+
+/* When collapsed, round all corners */
+details.field-group:not([open]) > summary {
+  border-radius: calc(var(--radius) - 1px);
+}
+
+details.field-group > summary:hover { background: var(--border); }
 
 details.field-group > summary::marker,
 details.field-group > summary::-webkit-details-marker { display: none; }
 
+/* Divider between summary and content when open */
+details.field-group[open] > summary {
+  border-bottom: 1px solid var(--border);
+}
+
 .section-icon {
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
   flex-shrink: 0;
-  opacity: 0.65;
+  opacity: 0.7;
 }
 
 .chevron {
   margin-left: auto;
-  font-size: 9px;
-  opacity: 0.45;
+  font-size: 10px;
+  opacity: 0.5;
   transition: transform 0.15s;
 }
 details.field-group[open] > summary .chevron { transform: rotate(90deg); }
@@ -168,8 +186,8 @@ details.field-group[open] > summary .chevron { transform: rotate(90deg); }
 .field-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px 10px;
-  padding: 10px 11px;
+  gap: 7px 10px;
+  padding: 10px 12px 12px;
 }
 
 .field-row { display: flex; flex-direction: column; gap: 3px; }
@@ -187,7 +205,7 @@ details.field-group[open] > summary .chevron { transform: rotate(90deg); }
 .field-row input[type="number"],
 .field-row input[type="url"],
 .field-row select {
-  padding: 5px 8px;
+  padding: 6px 8px;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 5px;
@@ -238,7 +256,7 @@ details.field-group[open] > summary .chevron { transform: rotate(90deg); }
 
 /* ── Notes section ── */
 #fields-form > div.field-group {
-  padding: 10px 11px;
+  padding: 10px 12px;
 }
 
 #fields-form > div.field-group label {
@@ -253,7 +271,7 @@ details.field-group[open] > summary .chevron { transform: rotate(90deg); }
 
 #field-notes {
   width: 100%;
-  padding: 6px 9px;
+  padding: 7px 9px;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 5px;
@@ -277,26 +295,27 @@ details.field-group[open] > summary .chevron { transform: rotate(90deg); }
   flex-shrink: 0;
 }
 
+/* 2×2 grid: each button ~50% width, allowing icon + label to breathe */
 .action-bar button {
-  flex: 1;
-  min-width: 60px;
-  padding: 7px 8px;
+  flex: 1 0 calc(50% - 3px);
+  padding: 8px 10px;
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--text2);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s, color 0.12s;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 6px;
   white-space: nowrap;
+  min-width: 0;
 }
 
-.action-bar button img { width: 13px; height: 13px; opacity: 0.65; }
+.action-bar button img { width: 14px; height: 14px; opacity: 0.65; flex-shrink: 0; }
 .action-bar button:hover { background: var(--border); border-color: var(--border-strong); color: var(--text); }
 .action-bar button:hover img { opacity: 1; }
 
@@ -314,28 +333,27 @@ details.field-group[open] > summary .chevron { transform: rotate(90deg); }
 /* ── Garage panel ── */
 #panel-garage {
   flex: 1;
-  overflow: hidden;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
-/* Garage rendered by garage.js — override specific elements */
 .garage-header {
   background: var(--surface);
   border-bottom: 2px solid var(--border);
-  padding: 10px 14px;
+  padding: 11px 14px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   font-size: 13px;
   font-weight: 700;
-  color: var(--muted);
+  color: var(--text2);
   text-transform: uppercase;
   letter-spacing: 0.07em;
 }
 
-.garage-header img { width: 15px; height: 15px; opacity: 0.65; }
+.garage-header img { width: 16px; height: 16px; opacity: 0.65; }
 
 .garage-actions {
   display: flex;
@@ -348,21 +366,22 @@ details.field-group[open] > summary .chevron { transform: rotate(90deg); }
 }
 
 .garage-actions button {
-  padding: 6px 11px;
+  padding: 7px 12px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--text2);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   transition: background 0.12s, border-color 0.12s;
+  white-space: nowrap;
 }
 
-.garage-actions button img { width: 13px; height: 13px; opacity: 0.65; }
+.garage-actions button img { width: 14px; height: 14px; opacity: 0.65; flex-shrink: 0; }
 .garage-actions button:hover { background: var(--border); border-color: var(--border-strong); color: var(--text); }
 .garage-actions button:hover img { opacity: 1; }
 
@@ -374,6 +393,7 @@ details.field-group[open] > summary .chevron { transform: rotate(90deg); }
 
 .garage-body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 10px 14px;
 }
@@ -396,7 +416,7 @@ details.field-group[open] > summary .chevron { transform: rotate(90deg); }
 }
 
 .garage-table td {
-  padding: 7px 7px;
+  padding: 8px 7px;
   border-bottom: 1px solid var(--border);
   color: var(--text);
   vertical-align: middle;
@@ -405,7 +425,7 @@ details.field-group[open] > summary .chevron { transform: rotate(90deg); }
 .garage-table tr:hover td { background: var(--surface2); }
 
 .btn-delete {
-  padding: 3px 7px;
+  padding: 4px 8px;
   font-size: 11px;
   background: none;
   border: 1px solid var(--border);

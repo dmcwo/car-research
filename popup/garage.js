@@ -19,7 +19,7 @@ function renderGarage(garage, container, onDelete, onExportCsv, onExportJson, on
   // ── Header bar ─────────────────────────────────────────────────────────────
   var header = document.createElement('div');
   header.className = 'garage-header';
-  header.appendChild(garageIcon('store', 15));
+  header.appendChild(garageIcon('warehouse', 15));
   var headerTitle = document.createElement('span');
   headerTitle.textContent = 'Saved Cars';
   header.appendChild(headerTitle);
