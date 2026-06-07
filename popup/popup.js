@@ -174,22 +174,7 @@ function runExtraction() {
     var tab = tabs[0];
     if (!tab) { showError('No active tab found.'); return; }
 
-    var filesToInject = [
-      'shared/model.js',
-      'shared/constants.js',
-      'content/utils/dom-helpers.js',
-      'content/utils/price-parser.js',
-      'content/utils/normalize.js',
-      'content/extractors/generic-jsonld.js',
-      'content/extractors/generic-heuristic.js',
-      'content/extractors/carvana.js',
-      'content/extractors/carmax.js',
-      'content/extractors/cars-com.js',
-      'content/extractors/autotrader.js',
-      'content/extractors/kbb.js',
-      'content/extractors/craigslist.js',
-      'content/extract.js'
-    ];
+    var filesToInject = ['content/bundle.js'];
 
     browser.scripting.executeScript({
       target: { tabId: tab.id },
