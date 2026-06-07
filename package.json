@@ -4,8 +4,9 @@
   "description": "Firefox extension for car research and comparison shopping",
   "private": true,
   "scripts": {
-    "start": "web-ext run --source-dir .",
-    "build": "web-ext build --source-dir . --artifacts-dir web-ext-artifacts",
+    "bundle": "node scripts/bundle.js",
+    "start": "npm run bundle && web-ext run --source-dir .",
+    "build": "npm run bundle && web-ext build --source-dir . --artifacts-dir web-ext-artifacts",
     "lint": "web-ext lint --source-dir ."
   },
   "devDependencies": {
