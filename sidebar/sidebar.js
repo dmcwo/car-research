@@ -3,46 +3,84 @@ var garageData = [];
 var currentTabId = null;
 var currentUrl = null;
 
-// Field definitions: [fieldKey, label, inputType]
-var FIELDS = [
-  ['year',       'Year',         'number'],
-  ['make',       'Make',         'text'],
-  ['model',      'Model',        'text'],
-  ['trim',       'Trim',         'text'],
-  ['bodyStyle',  'Body Style',   'text'],
-  ['condition',  'Condition',    'text'],
-  ['engine',       'Engine',        'text'],
-  ['fuelType',     'Fuel Type',     'text'],
-  ['mpgCity',      'MPG City',      'number'],
-  ['mpgHighway',   'MPG Hwy',       'number'],
-  ['mpgCombined',  'MPG Combined',  'number'],
-  ['drivetrain',   'Drivetrain',    'text'],
-  ['transmission', 'Transmission',  'text'],
-  ['colorExterior', 'Ext Color', 'text'],
-  ['colorInterior', 'Int Color', 'text'],
-  ['price',       'Price ($)',   'number'],
-  ['mileage',     'Mileage',     'number'],
-  ['vin',         'VIN',         'text'],
-  ['stockNumber', 'Stock #',     'text'],
-  ['owners',             '# Owners',    'number'],
-  ['accidentCount',      'Accidents',   'number'],
-  ['carfaxSummary',      'Carfax',      'text'],
-  ['isCertifiedPreOwned','CPO',         'checkbox'],
-  ['warrantyInfo',       'Warranty',    'text'],
-  ['sellerName',     'Seller',          'text'],
-  ['sellerType',     'Seller Type',     'text'],
-  ['sellerPhone',    'Phone',           'text'],
-  ['sellerLocation', 'Location',        'text'],
-  ['daysOnLot',   'Days on Lot', 'number'],
-  ['websiteName', 'Website',     'text'],
-  ['url',         'URL',         'url']
+// ── Icon helper ──────────────────────────────────────────────────────────────
+function icon(name, size) {
+  var img = document.createElement('img');
+  img.src = '../icons/lucide/' + name + '.svg';
+  img.alt = '';
+  img.width = size || 13;
+  img.height = size || 13;
+  return img;
+}
+
+// ── Controlled-vocabulary options ────────────────────────────────────────────
+var FIELD_OPTIONS = {
+  condition:  ['', 'New', 'Used', 'CPO'],
+  fuelType:   ['', 'Gasoline', 'Diesel', 'Hybrid', 'PHEV', 'Electric', 'Hydrogen'],
+  bodyStyle:  ['', 'Sedan', 'SUV', 'Truck', 'Hatchback', 'Coupe', 'Convertible', 'Wagon', 'Van', 'Minivan'],
+  sellerType: ['', 'Dealer', 'Private']
+};
+
+var KNOWN_MAKES = [
+  'Acura','Alfa Romeo','Aston Martin','Audi','Bentley','BMW','Buick','Cadillac',
+  'Chevrolet','Chrysler','Dodge','Ferrari','Fiat','Ford','Genesis','GMC','Honda',
+  'Hyundai','Infiniti','Jaguar','Jeep','Kia','Lamborghini','Land Rover','Lexus',
+  'Lincoln','Maserati','Mazda','McLaren','Mercedes-Benz','MINI','Mitsubishi',
+  'Nissan','Pontiac','Porsche','Ram','Rivian','Rolls-Royce','Saturn','Subaru',
+  'Tesla','Toyota','Volkswagen','Volvo'
 ];
 
+// Field definitions: [fieldKey, label, inputType]
+// inputType: 'text'|'number'|'url'|'checkbox'|'select'|'datalist'
+var FIELDS = [
+  ['year',        'Year',         'number'],
+  ['make',        'Make',         'datalist'],
+  ['model',       'Model',        'text'],
+  ['trim',        'Trim',         'text'],
+  ['bodyStyle',   'Body Style',   'select'],
+  ['condition',   'Condition',    'select'],
+  ['engine',      'Engine',       'text'],
+  ['fuelType',    'Fuel Type',    'select'],
+  ['mpgCity',     'MPG City',     'number'],
+  ['mpgHighway',  'MPG Hwy',      'number'],
+  ['mpgCombined', 'MPG Combined', 'number'],
+  ['drivetrain',  'Drivetrain',   'text'],
+  ['transmission','Transmission', 'text'],
+  ['price',       'Price ($)',    'number'],
+  ['mileage',     'Mileage',      'number'],
+  ['vin',         'VIN',          'text'],
+  ['stockNumber', 'Stock #',      'text'],
+  ['colorExterior','Ext Color',   'text'],
+  ['colorInterior','Int Color',   'text'],
+  ['owners',             '# Owners',  'number'],
+  ['accidentCount',      'Accidents', 'number'],
+  ['carfaxSummary',      'Carfax',    'text'],
+  ['isCertifiedPreOwned','CPO',        'checkbox'],
+  ['warrantyInfo',       'Warranty',  'text'],
+  ['sellerName',    'Seller',       'text'],
+  ['sellerType',    'Seller Type',  'select'],
+  ['sellerPhone',   'Phone',        'text'],
+  ['sellerLocation','Location',     'text'],
+  ['daysOnLot',   'Days on Lot',  'number'],
+  ['websiteName', 'Website',      'text'],
+  ['url',         'URL',          'url']
+];
+
+// Section icon names (Lucide)
+var GROUP_ICONS = {
+  'Vehicle':    'car',
+  'Listing':    'tag',
+  'Appearance': 'palette',
+  'History':    'history',
+  'Seller':     'store',
+  'Meta':       'info'
+};
+
+// Vehicle absorbs all Powertrain fields. Listing moved to position 2.
 var GROUPS = [
-  { label: 'Vehicle',    keys: ['year','make','model','trim','bodyStyle','condition'] },
-  { label: 'Powertrain', keys: ['engine','fuelType','mpgCity','mpgHighway','mpgCombined','drivetrain','transmission'] },
-  { label: 'Appearance', keys: ['colorExterior','colorInterior'] },
+  { label: 'Vehicle',    keys: ['year','make','model','trim','bodyStyle','condition','engine','fuelType','mpgCity','mpgHighway','mpgCombined','drivetrain','transmission'] },
   { label: 'Listing',    keys: ['price','mileage','vin','stockNumber'] },
+  { label: 'Appearance', keys: ['colorExterior','colorInterior'] },
   { label: 'History',    keys: ['owners','accidentCount','carfaxSummary','isCertifiedPreOwned','warrantyInfo'] },
   { label: 'Seller',     keys: ['sellerName','sellerType','sellerPhone','sellerLocation'] },
   { label: 'Meta',       keys: ['daysOnLot','websiteName','url'] }
@@ -55,26 +93,34 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('tab-extract').onclick = function() { switchTab('extract'); };
   document.getElementById('tab-garage').onclick  = function() { switchTab('garage'); };
 
-  document.getElementById('btn-copy-csv').onclick     = copyAsCsv;
-  document.getElementById('btn-download-csv').onclick = downloadCsv;
+  document.getElementById('btn-copy-csv').onclick      = copyAsCsv;
+  document.getElementById('btn-download-csv').onclick  = downloadCsv;
   document.getElementById('btn-download-json').onclick = downloadJson;
-  document.getElementById('btn-save').onclick          = saveToGarage;
+  document.getElementById('btn-save').onclick           = saveToGarage;
 
-  // Initial extraction on the current active tab
+  // Icons in action bar buttons
+  document.getElementById('btn-copy-csv').prepend(icon('clipboard'));
+  document.getElementById('btn-download-csv').prepend(icon('download'));
+  document.getElementById('btn-download-json').prepend(icon('file-json'));
+  document.getElementById('btn-save').prepend(icon('bookmark-plus'));
+
+  // Icons in tabs
+  var tabExtract = document.getElementById('tab-extract');
+  var tabGarage  = document.getElementById('tab-garage');
+  tabExtract.insertBefore(icon('car', 15), tabExtract.firstChild);
+  tabGarage.insertBefore(icon('store', 15), tabGarage.firstChild);
+
   runExtraction();
 
-  // Re-extract when the user switches to a different tab
   browser.tabs.onActivated.addListener(function(info) {
     currentTabId = info.tabId;
-    // Small delay to let the tab settle before injecting
     setTimeout(runExtraction, 500);
   });
 
-  // Re-extract when a tab finishes navigating to a new page
   browser.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     if (tabId !== currentTabId) return;
     if (changeInfo.status !== 'complete') return;
-    if (tab.url === currentUrl) return; // same URL — don't re-run
+    if (tab.url === currentUrl) return;
     currentUrl = tab.url;
     setTimeout(runExtraction, 500);
   });
@@ -85,12 +131,39 @@ function buildForm() {
   var fieldMap = {};
   FIELDS.forEach(function(f) { fieldMap[f[0]] = f; });
 
+  // Shared datalist for make typeahead
+  var makeDatalist = document.createElement('datalist');
+  makeDatalist.id = 'datalist-make';
+  KNOWN_MAKES.forEach(function(m) {
+    var opt = document.createElement('option');
+    opt.value = m;
+    makeDatalist.appendChild(opt);
+  });
+  form.appendChild(makeDatalist);
+
   GROUPS.forEach(function(group) {
     var section = document.createElement('details');
     section.className = 'field-group';
     section.open = ['Vehicle','Listing','Seller'].includes(group.label);
+
     var summary = document.createElement('summary');
-    summary.textContent = group.label;
+
+    var iconName = GROUP_ICONS[group.label];
+    if (iconName) {
+      var si = icon(iconName, 13);
+      si.className = 'section-icon';
+      summary.appendChild(si);
+    }
+
+    var labelSpan = document.createElement('span');
+    labelSpan.textContent = group.label;
+    summary.appendChild(labelSpan);
+
+    var chevron = document.createElement('span');
+    chevron.className = 'chevron';
+    chevron.textContent = '▶';
+    summary.appendChild(chevron);
+
     section.appendChild(summary);
 
     var grid = document.createElement('div');
@@ -99,19 +172,12 @@ function buildForm() {
     group.keys.forEach(function(key) {
       var def = fieldMap[key];
       if (!def) return;
+
       var label = document.createElement('label');
       label.setAttribute('for', 'field-' + key);
       label.textContent = def[1];
 
-      var input;
-      if (def[2] === 'checkbox') {
-        input = document.createElement('input');
-        input.type = 'checkbox';
-      } else {
-        input = document.createElement('input');
-        input.type = def[2];
-        input.placeholder = def[1];
-      }
+      var input = createInput(def);
       input.id = 'field-' + key;
       input.dataset.key = key;
 
@@ -135,10 +201,46 @@ function buildForm() {
   var notesArea = document.createElement('textarea');
   notesArea.id = 'field-notes';
   notesArea.rows = 3;
-  notesArea.placeholder = 'Personal notes...';
+  notesArea.placeholder = 'Personal notes…';
   notesSection.appendChild(notesLabel);
   notesSection.appendChild(notesArea);
   form.appendChild(notesSection);
+}
+
+function createInput(def) {
+  var key = def[0], type = def[2];
+
+  if (type === 'select') {
+    var sel = document.createElement('select');
+    var options = FIELD_OPTIONS[key] || [''];
+    options.forEach(function(opt) {
+      var o = document.createElement('option');
+      o.value = opt;
+      o.textContent = opt || '—';
+      sel.appendChild(o);
+    });
+    return sel;
+  }
+
+  if (type === 'checkbox') {
+    var cb = document.createElement('input');
+    cb.type = 'checkbox';
+    return cb;
+  }
+
+  var input = document.createElement('input');
+
+  if (type === 'datalist') {
+    input.type = 'text';
+    input.setAttribute('list', 'datalist-make');
+    input.placeholder = def[1];
+    input.autocomplete = 'off';
+    return input;
+  }
+
+  input.type = type;
+  input.placeholder = def[1];
+  return input;
 }
 
 function populateForm(record) {
@@ -261,7 +363,9 @@ function switchTab(name) {
 function refreshGarage() {
   loadGarage(function(garage) {
     garageData = garage;
-    document.getElementById('tab-garage').textContent = 'Garage (' + garage.length + ')';
+    // Tab label has icon as firstChild; update the text node (lastChild)
+    var tabGarage = document.getElementById('tab-garage');
+    tabGarage.lastChild.textContent = 'Garage (' + garage.length + ')';
     renderGarage(
       garage,
       document.getElementById('panel-garage'),
@@ -311,8 +415,8 @@ function saveToGarage() {
   browser.runtime.sendMessage({ type: 'SAVE_CAR', record: record }).then(function(resp) {
     if (resp.ok) {
       flash('btn-save', 'Saved!');
-      document.getElementById('tab-garage').textContent =
-        'Garage (' + (garageData.length + 1) + ')';
+      var tabGarage = document.getElementById('tab-garage');
+      tabGarage.lastChild.textContent = 'Garage (' + (garageData.length + 1) + ')';
     } else {
       showError('Save failed.');
     }
@@ -322,8 +426,10 @@ function saveToGarage() {
 function flash(btnId, msg) {
   var btn = document.getElementById(btnId);
   if (!btn) return;
-  var orig = btn.textContent;
-  btn.textContent = msg;
+  // lastChild is the text node after the icon img
+  var textNode = btn.lastChild;
+  var orig = textNode.textContent;
+  textNode.textContent = msg;
   btn.disabled = true;
-  setTimeout(function() { btn.textContent = orig; btn.disabled = false; }, 1500);
+  setTimeout(function() { textNode.textContent = orig; btn.disabled = false; }, 1500);
 }
