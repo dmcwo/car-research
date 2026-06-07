@@ -7,15 +7,19 @@ function extractCarmax() {
     var pages = data && data.props && data.props.pageProps;
     if (!pages) return result;
 
-    // CarMax stores vehicle under various keys
-    var vdp = pages.vehicle || pages.vehicleDetails || pages.car;
-    if (!vdp) {
-      var keys = Object.keys(pages);
+    // Deep search for vehicle object anywhere in pageProps
+    function findVehicle(obj, depth) {
+      if (!obj || typeof obj !== 'object' || depth > 8) return null;
+      if ((obj.make || obj.year) && (obj.vin || obj.stockNumber || obj.price || obj.mileage)) return obj;
+      var keys = Object.keys(obj);
       for (var i = 0; i < keys.length; i++) {
-        var v = pages[keys[i]];
-        if (v && typeof v === 'object' && (v.make || v.year || v.stockNumber)) { vdp = v; break; }
+        var found = findVehicle(obj[keys[i]], depth + 1);
+        if (found) return found;
       }
+      return null;
     }
+
+    var vdp = pages.vehicle || pages.vehicleDetails || pages.car || findVehicle(pages, 0);
     if (!vdp) return result;
 
     if (vdp.year != null) result.year = parseInt(vdp.year, 10);
