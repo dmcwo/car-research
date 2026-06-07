@@ -1,46 +1,43 @@
-// Injected via scripting.executeScript — no ES module imports available.
-// All dependencies are injected as separate files before this one.
-// Returns a CarRecord object as the last expression value.
+// Injected via scripting.executeScript (files). Stores result on window so
+// a subsequent func injection can reliably retrieve it (files-based injection
+// does not guarantee return value capture in all Firefox versions).
 
 (function() {
   var hostname = window.location.hostname;
   var url = window.location.href;
   var _debug = { site: null, siteError: null, jsonldError: null, heuristicError: null };
 
+  // Diagnostic: record what's available on the page before we start
+  var _pageInfo = {
+    hasNextData: !!document.getElementById('__NEXT_DATA__'),
+    jsonLdCount: document.querySelectorAll('script[type="application/ld+json"]').length,
+    title: document.title.slice(0, 120),
+    hostname: hostname
+  };
+
   try {
-    // Determine which site-specific extractor to run
     var siteResult = {};
     var extractorName = 'none';
     try {
-      if (hostname.includes('carvana.com'))         { extractorName = 'carvana';    siteResult = extractCarvana(); }
-      else if (hostname.includes('carmax.com'))      { extractorName = 'carmax';     siteResult = extractCarmax(); }
-      else if (hostname.includes('cars.com'))         { extractorName = 'cars-com';   siteResult = extractCarsCom(); }
-      else if (hostname.includes('autotrader.com'))   { extractorName = 'autotrader'; siteResult = extractAutotrader(); }
-      else if (hostname.includes('kbb.com'))          { extractorName = 'kbb';        siteResult = extractKbb(); }
-      else if (hostname.includes('craigslist.org'))   { extractorName = 'craigslist'; siteResult = extractCraigslist(); }
-      else                                            { extractorName = 'generic'; }
+      if (hostname.includes('carvana.com'))        { extractorName = 'carvana';    siteResult = extractCarvana(); }
+      else if (hostname.includes('carmax.com'))     { extractorName = 'carmax';     siteResult = extractCarmax(); }
+      else if (hostname.includes('cars.com'))        { extractorName = 'cars-com';   siteResult = extractCarsCom(); }
+      else if (hostname.includes('autotrader.com'))  { extractorName = 'autotrader'; siteResult = extractAutotrader(); }
+      else if (hostname.includes('kbb.com'))         { extractorName = 'kbb';        siteResult = extractKbb(); }
+      else if (hostname.includes('craigslist.org'))  { extractorName = 'craigslist'; siteResult = extractCraigslist(); }
+      else                                           { extractorName = 'generic'; }
       _debug.site = extractorName;
     } catch(e) {
       _debug.site = extractorName;
-      _debug.siteError = e.message + ' @ ' + e.stack;
-      console.error('[car-research] site extractor (' + extractorName + ') threw:', e);
+      _debug.siteError = e.message + '\n' + (e.stack || '');
     }
 
-    // Tier 2: generic JSON-LD
     var jsonldResult = {};
-    try { jsonldResult = extractJsonLd(); } catch(e) {
-      _debug.jsonldError = e.message;
-      console.error('[car-research] JSON-LD extractor threw:', e);
-    }
+    try { jsonldResult = extractJsonLd(); } catch(e) { _debug.jsonldError = e.message; }
 
-    // Tier 3: heuristic DOM
     var heuristicResult = {};
-    try { heuristicResult = extractHeuristic(); } catch(e) {
-      _debug.heuristicError = e.message;
-      console.error('[car-research] heuristic extractor threw:', e);
-    }
+    try { heuristicResult = extractHeuristic(); } catch(e) { _debug.heuristicError = e.message; }
 
-    // Merge: site-specific wins, then JSON-LD, then heuristic
     var merged = createCarRecord();
     [heuristicResult, jsonldResult, siteResult].forEach(function(src) {
       Object.keys(src).forEach(function(k) {
@@ -53,7 +50,6 @@
       });
     });
 
-    // Parse year from title hint if still missing
     var titleHint = siteResult._titleHint || jsonldResult._titleHint || heuristicResult._titleHint || '';
     if (titleHint && !merged.year) {
       var ym = titleHint.match(/\b(19|20)\d{2}\b/);
@@ -68,13 +64,15 @@
     }
 
     merged._debug = _debug;
-    console.log('[car-research] extraction complete', _debug, merged);
-    return merged;
+    merged._pageInfo = _pageInfo;
+    window.__carResearchResult = merged;
 
   } catch(e) {
-    console.error('[car-research] fatal extraction error:', e);
-    // Return a minimal record so the popup always gets something non-null
-    var fallback = { _fatal: e.message + '\n' + e.stack, url: url, websiteName: hostname };
-    return fallback;
+    window.__carResearchResult = {
+      _fatal: e.message + '\n' + (e.stack || ''),
+      _pageInfo: _pageInfo,
+      url: url,
+      websiteName: hostname
+    };
   }
 })();
