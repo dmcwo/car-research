@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Car Research — Comparison Dashboard</title>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f2f2f7;
+      --surface: #ffffff;
+      --surface2: #ebebf2;
+      --border: #c8c8d4;
+      --accent: #4f3fd4;
+      --accent-light: #ede9ff;
+      --text: #111118;
+      --text2: #3a3a4a;
+      --muted: #5e5e72;
+      --success: #1a7f53;
+      --warning: #a05c00;
+      --error: #b52828;
+      --radius: 8px;
+      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 8px rgba(0,0,0,.04);
+    }
+
+    body {
+      font: 14px/1.5 system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .page-header {
+      background: var(--surface);
+      border-bottom: 2px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .page-header h1 {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .page-header h1 span { color: var(--accent); }
+
+    .header-stats {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-left: auto;
+    }
+
+    .stat {
+      text-align: right;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── No-data state ── */
+    #no-data {
+      max-width: 480px;
+      margin: 80px auto;
+      text-align: center;
+      padding: 40px 32px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    #no-data h2 { font-size: 18px; margin-bottom: 12px; }
+    #no-data p { color: var(--muted); line-height: 1.6; }
+
+    /* ── Main layout ── */
+    .main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px 24px 40px;
+      display: none;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .main.visible { display: flex; }
+
+    /* ── Filter bar ── */
+    .filter-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      box-shadow: var(--shadow);
+    }
+
+    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+
+    .filter-group label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .filter-group select,
+    .filter-group input[type="number"] {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      min-width: 130px;
+    }
+
+    .filter-group select:focus,
+    .filter-group input:focus { border-color: var(--accent); }
+
+    .filter-group.filter-range { flex-direction: row; align-items: flex-end; gap: 6px; }
+    .filter-group.filter-range label { display: block; width: 100%; }
+    .filter-group.filter-range input { min-width: 80px; width: 80px; }
+
+    .filter-reset {
+      padding: 7px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text2);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      align-self: flex-end;
+      transition: background 0.12s;
+    }
+    .filter-reset:hover { background: var(--border); }
+
+    /* ── Section cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text2);
+    }
+
+    .card-body { padding: 16px 18px; }
+
+    /* ── Chart grid ── */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 900px) { .chart-grid { grid-template-columns: 1fr; } }
+
+    .chart-placeholder {
+      height: 320px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* ── Table ── */
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead th {
+      text-align: left;
+      padding: 8px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+      background: var(--surface2);
+    }
+
+    thead th:hover { color: var(--text); }
+    thead th.sort-asc::after  { content: ' ▲'; font-size: 9px; }
+    thead th.sort-desc::after { content: ' ▼'; font-size: 9px; }
+
+    tbody tr:hover td { background: var(--surface2); }
+
+    tbody td {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+      color: var(--text);
+    }
+
+    .cell-num { text-align: right; font-variant-numeric: tabular-nums; }
+    .cell-link a { color: var(--accent); text-decoration: none; font-size: 12px; }
+    .cell-link a:hover { text-decoration: underline; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-new  { background: #d4edda; color: #155724; }
+    .badge-used { background: var(--surface2); color: var(--muted); }
+    .badge-cpo  { background: #cce5ff; color: #004085; }
+
+    .table-empty {
+      text-align: center; color: var(--muted);
+      padding: 32px; font-size: 13px;
+    }
+
+    /* ── Financing calculator ── */
+    .calc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .calc-field { display: flex; flex-direction: column; gap: 4px; }
+
+    .calc-field label {
+      font-size: 11px; font-weight: 600;
+      color: var(--muted); text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .calc-field input {
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+    }
+    .calc-field input:focus { border-color: var(--accent); }
+
+    .calc-table { font-size: 13px; width: 100%; border-collapse: collapse; }
+    .calc-table th {
+      text-align: left; padding: 7px 10px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--muted);
+      border-bottom: 2px solid var(--border); background: var(--surface2);
+    }
+    .calc-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    .calc-table .cell-num { text-align: right; font-variant-numeric: tabular-nums; }
+    .calc-table tr:hover td { background: var(--surface2); }
+
+    .note { font-size: 12px; color: var(--muted); margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>Car Research — <span>Comparison Dashboard</span></h1>
+  <div class="header-stats" id="header-stats"></div>
+</header>
+
+<div id="no-data">
+  <h2>No data loaded</h2>
+  <p>Open this dashboard from the <strong>Garage</strong> section of the Car Research sidebar. Click "View in Dashboard" to load your saved cars here.</p>
+</div>
+
+<main class="main" id="main">
+
+  <!-- Filter bar -->
+  <div class="filter-bar" id="filter-bar">
+    <div class="filter-group">
+      <label>Make</label>
+      <select id="filter-make"><option value="">All makes</option></select>
+    </div>
+    <div class="filter-group">
+      <label>Condition</label>
+      <select id="filter-condition">
+        <option value="">All</option>
+        <option>New</option><option>Used</option><option>CPO</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Fuel Type</label>
+      <select id="filter-fuel"><option value="">All</option></select>
+    </div>
+    <div class="filter-group filter-range">
+      <label>Year</label>
+      <input type="number" id="filter-year-min" placeholder="From" min="1990" max="2030">
+      <span style="align-self:center;color:var(--muted)">–</span>
+      <input type="number" id="filter-year-max" placeholder="To"   min="1990" max="2030">
+    </div>
+    <div class="filter-group filter-range">
+      <label>Price ($)</label>
+      <input type="number" id="filter-price-min" placeholder="Min" min="0">
+      <span style="align-self:center;color:var(--muted)">–</span>
+      <input type="number" id="filter-price-max" placeholder="Max" min="0">
+    </div>
+    <button class="filter-reset" id="filter-reset">Reset filters</button>
+  </div>
+
+  <!-- Comparison table -->
+  <div class="card">
+    <div class="card-header">All Cars (<span id="table-count">0</span>)</div>
+    <div class="card-body" style="padding:0">
+      <div class="table-wrap">
+        <table id="car-table">
+          <thead>
+            <tr>
+              <th data-col="year">Year</th>
+              <th data-col="make">Make</th>
+              <th data-col="model">Model</th>
+              <th data-col="trim">Trim</th>
+              <th data-col="condition">Cond.</th>
+              <th data-col="price"  class="cell-num">Price</th>
+              <th data-col="mileage" class="cell-num">Miles</th>
+              <th data-col="mpgCombined" class="cell-num">MPG</th>
+              <th data-col="fuelType">Fuel</th>
+              <th data-col="drivetrain">Drive</th>
+              <th data-col="sellerName">Seller</th>
+              <th data-col="daysOnLot" class="cell-num">Days</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="car-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="chart-grid">
+    <div class="card">
+      <div class="card-header">Price vs Mileage</div>
+      <div class="card-body" style="padding:8px">
+        <div id="chart-scatter" style="height:300px"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">Price by Make / Model</div>
+      <div class="card-body" style="padding:8px">
+        <div id="chart-price-bar" style="height:300px"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">Fuel Economy (MPG)</div>
+      <div class="card-body" style="padding:8px">
+        <div id="chart-mpg" style="height:300px"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">Price Distribution</div>
+      <div class="card-body" style="padding:8px">
+        <div id="chart-histogram" style="height:300px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Financing calculator -->
+  <div class="card">
+    <div class="card-header">Financing &amp; Cost of Ownership</div>
+    <div class="card-body">
+      <div class="calc-grid">
+        <div class="calc-field">
+          <label>Down Payment ($)</label>
+          <input type="number" id="calc-down" value="5000" min="0" step="500">
+        </div>
+        <div class="calc-field">
+          <label>Interest Rate (%)</label>
+          <input type="number" id="calc-rate" value="7.5" min="0" step="0.25">
+        </div>
+        <div class="calc-field">
+          <label>Loan Term (years)</label>
+          <input type="number" id="calc-term" value="5" min="1" max="10">
+        </div>
+        <div class="calc-field">
+          <label>Miles / Year</label>
+          <input type="number" id="calc-miles" value="12000" min="1000" step="1000">
+        </div>
+        <div class="calc-field">
+          <label>Gas Price ($/gal)</label>
+          <input type="number" id="calc-gas" value="3.50" min="0" step="0.10">
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="calc-table" id="calc-table">
+          <thead>
+            <tr>
+              <th>Car</th>
+              <th class="cell-num">Price</th>
+              <th class="cell-num">Monthly Pmt</th>
+              <th class="cell-num">Total Loan</th>
+              <th class="cell-num">Gas / yr</th>
+              <th class="cell-num">5-yr Cost</th>
+              <th class="cell-num">10-yr Cost</th>
+            </tr>
+          </thead>
+          <tbody id="calc-tbody"></tbody>
+        </table>
+      </div>
+      <p class="note">Monthly payment = standard amortization on (price − down payment). Gas cost = (miles/year ÷ MPG combined) × gas price. 5/10-yr cost = total loan payments + gas over period. Does not include insurance, maintenance, depreciation, or registration.</p>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ── Load data from browser.storage ──────────────────────────────────────────
+var allCars = [];
+var filteredCars = [];
+var sortCol = 'price';
+var sortDir = 1; // 1 = asc, -1 = desc
+
+function init(cars) {
+  allCars = cars;
+  populateFilters(cars);
+  applyFilters();
+  renderHeaderStats(cars);
+}
+
+function renderHeaderStats(cars) {
+  var prices = cars.map(function(c){ return c.price; }).filter(Boolean);
+  var el = document.getElementById('header-stats');
+  if (!cars.length) { el.innerHTML = ''; return; }
+  var minP = Math.min.apply(null, prices);
+  var maxP = Math.max.apply(null, prices);
+  el.innerHTML = [
+    stat(cars.length, 'Cars'),
+    prices.length ? stat('$' + fmt(Math.round((minP+maxP)/2)), 'Avg Price') : '',
+    prices.length ? stat('$' + fmt(minP) + '–$' + fmt(maxP), 'Price Range') : ''
+  ].join('');
+}
+
+function stat(val, label) {
+  return '<div class="stat"><div class="stat-value">' + val + '</div><div class="stat-label">' + label + '</div></div>';
+}
+
+function populateFilters(cars) {
+  var makes = unique(cars.map(function(c){ return c.make; }).filter(Boolean)).sort();
+  var fuels = unique(cars.map(function(c){ return c.fuelType; }).filter(Boolean)).sort();
+  var makeEl = document.getElementById('filter-make');
+  makes.forEach(function(m) {
+    var o = document.createElement('option'); o.value = m; o.textContent = m;
+    makeEl.appendChild(o);
+  });
+  var fuelEl = document.getElementById('filter-fuel');
+  fuels.forEach(function(f) {
+    var o = document.createElement('option'); o.value = f; o.textContent = f;
+    fuelEl.appendChild(o);
+  });
+}
+
+function applyFilters() {
+  var make  = document.getElementById('filter-make').value;
+  var cond  = document.getElementById('filter-condition').value;
+  var fuel  = document.getElementById('filter-fuel').value;
+  var yMin  = parseInt(document.getElementById('filter-year-min').value) || 0;
+  var yMax  = parseInt(document.getElementById('filter-year-max').value) || 9999;
+  var pMin  = parseFloat(document.getElementById('filter-price-min').value) || 0;
+  var pMax  = parseFloat(document.getElementById('filter-price-max').value) || Infinity;
+
+  filteredCars = allCars.filter(function(c) {
+    if (make && c.make !== make) return false;
+    if (cond && c.condition !== cond) return false;
+    if (fuel && c.fuelType !== fuel) return false;
+    if (c.year && (c.year < yMin || c.year > yMax)) return false;
+    if (c.price && (c.price < pMin || c.price > pMax)) return false;
+    return true;
+  });
+
+  sortCars();
+  renderTable();
+  renderCharts();
+  renderCalc();
+}
+
+function sortCars() {
+  filteredCars.sort(function(a, b) {
+    var av = a[sortCol], bv = b[sortCol];
+    if (av == null) return 1; if (bv == null) return -1;
+    if (typeof av === 'string') return av.localeCompare(bv) * sortDir;
+    return (av - bv) * sortDir;
+  });
+}
+
+// ── Table ────────────────────────────────────────────────────────────────────
+function renderTable() {
+  var tbody = document.getElementById('car-tbody');
+  document.getElementById('table-count').textContent = filteredCars.length;
+
+  if (!filteredCars.length) {
+    tbody.innerHTML = '<tr><td class="table-empty" colspan="13">No cars match the current filters.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  filteredCars.forEach(function(c) {
+    var tr = document.createElement('tr');
+    tr.innerHTML = [
+      td(c.year || ''),
+      td(c.make || ''),
+      td(c.model || ''),
+      td(c.trim || ''),
+      td(condBadge(c.condition)),
+      td(c.price   ? '$' + fmt(c.price)   : '', 'cell-num'),
+      td(c.mileage ? fmt(c.mileage) + ' mi': '', 'cell-num'),
+      td(c.mpgCombined || '', 'cell-num'),
+      td(c.fuelType || ''),
+      td(c.drivetrain || ''),
+      td(c.sellerName || ''),
+      td(c.daysOnLot != null ? c.daysOnLot : '', 'cell-num'),
+      '<td class="cell-link">' + (c.url ? '<a href="' + esc(c.url) + '" target="_blank">View ↗</a>' : '') + '</td>'
+    ].join('');
+    tbody.appendChild(tr);
+  });
+
+  // Update sort header indicators
+  document.querySelectorAll('thead th[data-col]').forEach(function(th) {
+    th.classList.remove('sort-asc','sort-desc');
+    if (th.dataset.col === sortCol) {
+      th.classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
+    }
+  });
+}
+
+function td(val, cls) {
+  return '<td' + (cls ? ' class="'+cls+'"' : '') + '>' + val + '</td>';
+}
+
+function condBadge(c) {
+  if (!c) return '';
+  var cls = c === 'New' ? 'badge-new' : c === 'CPO' ? 'badge-cpo' : 'badge-used';
+  return '<span class="badge ' + cls + '">' + c + '</span>';
+}
+
+// Table sort
+document.querySelectorAll('thead th[data-col]').forEach(function(th) {
+  th.addEventListener('click', function() {
+    var col = th.dataset.col;
+    if (sortCol === col) { sortDir = -sortDir; }
+    else { sortCol = col; sortDir = 1; }
+    sortCars();
+    renderTable();
+  });
+});
+
+// ── Charts ───────────────────────────────────────────────────────────────────
+var PALETTE = ['#4f3fd4','#e05252','#1a7f53','#e0a030','#2a7fc4','#9c27b0','#e67c22','#16a085','#8e44ad','#2980b9'];
+
+function carLabel(c) {
+  return [c.year, c.make, c.model, c.trim].filter(Boolean).join(' ');
+}
+
+function renderCharts() {
+  renderScatter();
+  renderPriceBar();
+  renderMpgBar();
+  renderHistogram();
+}
+
+function plotLayout(extra) {
+  return Object.assign({
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: '#f2f2f7',
+    font: { family: 'system-ui,-apple-system,sans-serif', size: 12, color: '#3a3a4a' },
+    margin: { t: 24, r: 16, b: 56, l: 60 },
+    hoverlabel: { bgcolor: '#fff', bordercolor: '#c8c8d4', font: { size: 12 } }
+  }, extra || {});
+}
+
+function renderScatter() {
+  var cars = filteredCars.filter(function(c){ return c.price && c.mileage; });
+  if (!cars.length) { Plotly.purge('chart-scatter'); return; }
+
+  // Color by make
+  var makes = unique(cars.map(function(c){ return c.make; }));
+  var traces = makes.map(function(make, i) {
+    var mc = cars.filter(function(c){ return c.make === make; });
+    return {
+      x: mc.map(function(c){ return c.mileage; }),
+      y: mc.map(function(c){ return c.price; }),
+      mode: 'markers',
+      type: 'scatter',
+      name: make,
+      text: mc.map(carLabel),
+      hovertemplate: '<b>%{text}</b><br>$%{y:,.0f} | %{x:,.0f} mi<extra></extra>',
+      marker: { color: PALETTE[i % PALETTE.length], size: 11, opacity: 0.85, line: { width: 1, color: '#fff' } }
+    };
+  });
+
+  Plotly.react('chart-scatter', traces, plotLayout({
+    xaxis: { title: 'Mileage', tickformat: ',.0f' },
+    yaxis: { title: 'Price ($)', tickformat: '$,.0f' },
+    showlegend: makes.length > 1,
+    legend: { orientation: 'h', y: -0.22 }
+  }), { responsive: true, displayModeBar: false });
+}
+
+function renderPriceBar() {
+  var cars = filteredCars.filter(function(c){ return c.price; });
+  if (!cars.length) { Plotly.purge('chart-price-bar'); return; }
+
+  // Group by make+model, sort by price
+  var groups = {};
+  cars.forEach(function(c) {
+    var key = [c.make, c.model].filter(Boolean).join(' ') || 'Unknown';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(c.price);
+  });
+
+  var labels = Object.keys(groups).sort(function(a,b){
+    var am = avg(groups[a]), bm = avg(groups[b]);
+    return am - bm;
+  });
+
+  var trace = {
+    x: labels.map(function(k){ return avg(groups[k]); }),
+    y: labels,
+    type: 'bar',
+    orientation: 'h',
+    text: labels.map(function(k){ return '$' + fmt(Math.round(avg(groups[k]))); }),
+    textposition: 'outside',
+    hovertemplate: '<b>%{y}</b><br>Avg: $%{x:,.0f}<extra></extra>',
+    marker: { color: PALETTE[0], opacity: 0.85 }
+  };
+
+  var h = Math.max(220, labels.length * 36);
+  document.getElementById('chart-price-bar').style.height = h + 'px';
+
+  Plotly.react('chart-price-bar', [trace], plotLayout({
+    xaxis: { title: 'Avg Price ($)', tickformat: '$,.0f' },
+    yaxis: { automargin: true },
+    margin: { t: 24, r: 80, b: 40, l: 110 }
+  }), { responsive: true, displayModeBar: false });
+}
+
+function renderMpgBar() {
+  var cars = filteredCars.filter(function(c){ return c.mpgCombined || c.mpgCity; });
+  if (!cars.length) { Plotly.purge('chart-mpg'); return; }
+
+  var labels = cars.map(carLabel);
+  var traces = [];
+  if (cars.some(function(c){ return c.mpgCity; })) {
+    traces.push({ name: 'City',     y: labels, x: cars.map(function(c){ return c.mpgCity || null; }),     type:'bar', orientation:'h', marker:{color:'#4f3fd4',opacity:.7} });
+  }
+  if (cars.some(function(c){ return c.mpgHighway; })) {
+    traces.push({ name: 'Highway',  y: labels, x: cars.map(function(c){ return c.mpgHighway || null; }),  type:'bar', orientation:'h', marker:{color:'#2a7fc4',opacity:.7} });
+  }
+  if (cars.some(function(c){ return c.mpgCombined; })) {
+    traces.push({ name: 'Combined', y: labels, x: cars.map(function(c){ return c.mpgCombined || null; }), type:'bar', orientation:'h', marker:{color:'#1a7f53',opacity:.85} });
+  }
+
+  var h = Math.max(220, cars.length * 40);
+  document.getElementById('chart-mpg').style.height = h + 'px';
+
+  Plotly.react('chart-mpg', traces, plotLayout({
+    barmode: 'group',
+    xaxis: { title: 'MPG' },
+    yaxis: { automargin: true },
+    margin: { t: 24, r: 16, b: 40, l: 160 },
+    legend: { orientation: 'h', y: -0.18 }
+  }), { responsive: true, displayModeBar: false });
+}
+
+function renderHistogram() {
+  var prices = filteredCars.map(function(c){ return c.price; }).filter(Boolean);
+  if (!prices.length) { Plotly.purge('chart-histogram'); return; }
+
+  Plotly.react('chart-histogram', [{
+    x: prices,
+    type: 'histogram',
+    nbinsx: Math.min(20, Math.ceil(Math.sqrt(prices.length) * 2)),
+    marker: { color: PALETTE[0], opacity: 0.8 },
+    hovertemplate: '$%{x:,.0f}<br>Count: %{y}<extra></extra>'
+  }], plotLayout({
+    xaxis: { title: 'Price ($)', tickformat: '$,.0f' },
+    yaxis: { title: 'Count' }
+  }), { responsive: true, displayModeBar: false });
+}
+
+// ── Financing calculator ──────────────────────────────────────────────────────
+function renderCalc() {
+  var down  = parseFloat(document.getElementById('calc-down').value)  || 0;
+  var rate  = parseFloat(document.getElementById('calc-rate').value)  || 0;
+  var term  = parseInt(document.getElementById('calc-term').value)    || 5;
+  var miles = parseFloat(document.getElementById('calc-miles').value) || 12000;
+  var gas   = parseFloat(document.getElementById('calc-gas').value)   || 3.50;
+
+  var tbody = document.getElementById('calc-tbody');
+  tbody.innerHTML = '';
+
+  var cars = filteredCars.filter(function(c){ return c.price; });
+  if (!cars.length) return;
+
+  cars.forEach(function(c) {
+    var principal = Math.max(0, c.price - down);
+    var monthlyRate = rate / 100 / 12;
+    var n = term * 12;
+    var monthly = monthlyRate > 0
+      ? principal * monthlyRate * Math.pow(1+monthlyRate, n) / (Math.pow(1+monthlyRate, n) - 1)
+      : principal / n;
+    var totalLoan = monthly * n;
+    var mpg = c.mpgCombined || c.mpgHighway || c.mpgCity || null;
+    var gasPerYear = mpg ? (miles / mpg) * gas : null;
+    var cost5  = totalLoan + (gasPerYear ? gasPerYear * 5  : 0);
+    var cost10 = (monthly * 10 * 12) + (gasPerYear ? gasPerYear * 10 : 0);
+
+    var tr = document.createElement('tr');
+    tr.innerHTML = [
+      td(carLabel(c)),
+      td('$' + fmt(c.price), 'cell-num'),
+      td('$' + fmt(Math.round(monthly)) + '/mo', 'cell-num'),
+      td('$' + fmt(Math.round(totalLoan)), 'cell-num'),
+      td(gasPerYear ? '$' + fmt(Math.round(gasPerYear)) : '—', 'cell-num'),
+      td('$' + fmt(Math.round(cost5)), 'cell-num'),
+      td('$' + fmt(Math.round(cost10)), 'cell-num')
+    ].join('');
+    tbody.appendChild(tr);
+  });
+}
+
+// Recalculate when inputs change
+['calc-down','calc-rate','calc-term','calc-miles','calc-gas'].forEach(function(id) {
+  document.getElementById(id).addEventListener('input', renderCalc);
+});
+
+// ── Filter wiring ─────────────────────────────────────────────────────────────
+['filter-make','filter-condition','filter-fuel',
+ 'filter-year-min','filter-year-max',
+ 'filter-price-min','filter-price-max'].forEach(function(id) {
+  document.getElementById(id).addEventListener('change', applyFilters);
+  document.getElementById(id).addEventListener('input',  applyFilters);
+});
+
+document.getElementById('filter-reset').addEventListener('click', function() {
+  ['filter-make','filter-condition','filter-fuel'].forEach(function(id){
+    document.getElementById(id).value = '';
+  });
+  ['filter-year-min','filter-year-max','filter-price-min','filter-price-max'].forEach(function(id){
+    document.getElementById(id).value = '';
+  });
+  applyFilters();
+});
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function fmt(n) { return Number(n).toLocaleString(); }
+function esc(s) { return String(s).replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+function unique(arr) { return arr.filter(function(v,i,a){ return a.indexOf(v)===i; }); }
+function avg(arr) { return arr.reduce(function(a,b){return a+b;},0) / arr.length; }
+
+// ── Entry point ───────────────────────────────────────────────────────────────
+(function() {
+  function showData(cars) {
+    document.getElementById('no-data').style.display = 'none';
+    document.getElementById('main').classList.add('visible');
+    init(cars);
+  }
+
+  // Try browser.storage (extension context)
+  if (typeof browser !== 'undefined' && browser.storage) {
+    browser.storage.local.get('dashboardData').then(function(result) {
+      var cars = result.dashboardData;
+      if (cars && cars.length) {
+        showData(cars);
+      }
+      // else: leave no-data message showing
+    });
+    return;
+  }
+
+  // Fallback: check URL hash for base64-encoded JSON (future use)
+  if (location.hash && location.hash.length > 1) {
+    try {
+      var cars = JSON.parse(atob(location.hash.slice(1)));
+      if (Array.isArray(cars)) { showData(cars); return; }
+    } catch(e) {}
+  }
+})();
+</script>
+</body>
+</html>
