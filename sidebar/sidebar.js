@@ -2,6 +2,7 @@ var currentRecord = null;
 var garageData = [];
 var currentTabId = null;
 var currentUrl = null;
+var garageOpen = false;
 
 // ── Icon helper ──────────────────────────────────────────────────────────────
 function icon(name, size) {
@@ -31,7 +32,6 @@ var KNOWN_MAKES = [
 ];
 
 // Field definitions: [fieldKey, label, inputType]
-// inputType: 'text'|'number'|'url'|'checkbox'|'select'|'datalist'
 var FIELDS = [
   ['year',        'Year',         'number'],
   ['make',        'Make',         'datalist'],
@@ -66,7 +66,6 @@ var FIELDS = [
   ['url',         'URL',          'url']
 ];
 
-// Section icon names (Lucide)
 var GROUP_ICONS = {
   'Vehicle':    'car',
   'Listing':    'tag',
@@ -76,7 +75,7 @@ var GROUP_ICONS = {
   'Meta':       'info'
 };
 
-// Vehicle absorbs all Powertrain fields. Listing moved to position 2.
+// Vehicle absorbs Powertrain. Listing at position 2.
 var GROUPS = [
   { label: 'Vehicle',    keys: ['year','make','model','trim','bodyStyle','condition','engine','fuelType','mpgCity','mpgHighway','mpgCombined','drivetrain','transmission'] },
   { label: 'Listing',    keys: ['price','mileage','vin','stockNumber'] },
@@ -88,10 +87,7 @@ var GROUPS = [
 
 document.addEventListener('DOMContentLoaded', function() {
   buildForm();
-  switchTab('extract');
-
-  document.getElementById('tab-extract').onclick = function() { switchTab('extract'); };
-  document.getElementById('tab-garage').onclick  = function() { switchTab('garage'); };
+  buildGarageToggle();
 
   document.getElementById('btn-copy-csv').onclick      = copyAsCsv;
   document.getElementById('btn-download-csv').onclick  = downloadCsv;
@@ -103,12 +99,6 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('btn-download-csv').prepend(icon('download'));
   document.getElementById('btn-download-json').prepend(icon('file-json'));
   document.getElementById('btn-save').prepend(icon('bookmark-plus'));
-
-  // Icons in tabs
-  var tabExtract = document.getElementById('tab-extract');
-  var tabGarage  = document.getElementById('tab-garage');
-  tabExtract.insertBefore(icon('car', 15), tabExtract.firstChild);
-  tabGarage.insertBefore(icon('warehouse', 15), tabGarage.firstChild);
 
   runExtraction();
 
@@ -125,6 +115,36 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(runExtraction, 500);
   });
 });
+
+// Build the garage toggle strip at the bottom
+function buildGarageToggle() {
+  var btn = document.getElementById('garage-toggle');
+  btn.appendChild(icon('warehouse', 16));
+  var label = document.createElement('span');
+  label.id = 'garage-label';
+  label.textContent = 'Garage (0)';
+  btn.appendChild(label);
+  var chevron = document.createElement('span');
+  chevron.className = 'garage-chevron';
+  chevron.textContent = '▲';
+  btn.appendChild(chevron);
+
+  btn.addEventListener('click', toggleGarage);
+}
+
+function toggleGarage() {
+  garageOpen = !garageOpen;
+  var section = document.getElementById('garage-section');
+  var toggle = document.getElementById('garage-toggle');
+  section.classList.toggle('open', garageOpen);
+  toggle.setAttribute('aria-expanded', String(garageOpen));
+  if (garageOpen) refreshGarage();
+}
+
+function updateGarageLabel(count) {
+  var label = document.getElementById('garage-label');
+  if (label) label.textContent = 'Garage (' + count + ')';
+}
 
 function buildForm() {
   var form = document.getElementById('fields-form');
@@ -150,7 +170,7 @@ function buildForm() {
 
     var iconName = GROUP_ICONS[group.label];
     if (iconName) {
-      var si = icon(iconName, 13);
+      var si = icon(iconName, 14);
       si.className = 'section-icon';
       summary.appendChild(si);
     }
@@ -212,8 +232,7 @@ function createInput(def) {
 
   if (type === 'select') {
     var sel = document.createElement('select');
-    var options = FIELD_OPTIONS[key] || [''];
-    options.forEach(function(opt) {
+    (FIELD_OPTIONS[key] || ['']).forEach(function(opt) {
       var o = document.createElement('option');
       o.value = opt;
       o.textContent = opt || '—';
@@ -352,20 +371,11 @@ function showError(msg) {
   status.className = 'status error';
 }
 
-function switchTab(name) {
-  document.getElementById('panel-extract').hidden = name !== 'extract';
-  document.getElementById('panel-garage').hidden  = name !== 'garage';
-  document.getElementById('tab-extract').classList.toggle('active', name === 'extract');
-  document.getElementById('tab-garage').classList.toggle('active', name === 'garage');
-  if (name === 'garage') refreshGarage();
-}
-
 function refreshGarage() {
   loadGarage(function(garage) {
     garageData = garage;
-    // Tab label has icon as firstChild; update the text node (lastChild)
-    var tabGarage = document.getElementById('tab-garage');
-    tabGarage.lastChild.textContent = 'Garage (' + garage.length + ')';
+    updateGarageLabel(garage.length);
+    if (!garageOpen) return;
     renderGarage(
       garage,
       document.getElementById('panel-garage'),
@@ -415,8 +425,8 @@ function saveToGarage() {
   browser.runtime.sendMessage({ type: 'SAVE_CAR', record: record }).then(function(resp) {
     if (resp.ok) {
       flash('btn-save', 'Saved!');
-      var tabGarage = document.getElementById('tab-garage');
-      tabGarage.lastChild.textContent = 'Garage (' + (garageData.length + 1) + ')';
+      updateGarageLabel(garageData.length + 1);
+      garageData.push(record);
     } else {
       showError('Save failed.');
     }

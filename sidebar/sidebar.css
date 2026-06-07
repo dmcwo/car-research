@@ -18,6 +18,7 @@
   --muted: #5e5e72;
   --radius: 7px;
   --shadow: 0 1px 3px rgba(0,0,0,.07);
+  --garage-open-height: 320px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -55,41 +56,12 @@ body {
   min-width: 280px;
 }
 
-/* ── Tabs ── */
-.tabs {
+/* ── Extraction panel ── */
+#panel-extract {
   display: flex;
-  border-bottom: 2px solid var(--border);
-  background: var(--surface);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  flex-shrink: 0;
-}
-
-.tab {
+  flex-direction: column;
   flex: 1;
-  padding: 10px 12px;
-  background: none;
-  border: none;
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  transition: color 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
-.tab img { width: 15px; height: 15px; opacity: 0.55; }
-.tab:hover { color: var(--text); }
-.tab:hover img { opacity: 0.8; }
-.tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); margin-bottom: -2px; }
-.tab.active img { opacity: 1; filter: invert(30%) sepia(90%) saturate(600%) hue-rotate(230deg); }
-
-@media (prefers-color-scheme: dark) {
-  .tab.active img { filter: invert(65%) sepia(60%) saturate(400%) hue-rotate(220deg); }
+  min-height: 0;
 }
 
 /* ── Status bar ── */
@@ -105,17 +77,10 @@ body {
 .status.warning  { color: var(--warning); }
 .status.error    { color: var(--error); white-space: pre-wrap; }
 
-/* ── Extraction panel ── */
-#panel-extract {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0; /* required for flex child scrolling in Firefox */
-}
-
+/* ── Fields form (scrollable) ── */
 #fields-form {
   flex: 1;
-  min-height: 0; /* required for overflow-y: auto to work inside flex */
+  min-height: 0;
   overflow-y: auto;
   padding: 10px 12px;
   display: flex;
@@ -123,9 +88,8 @@ body {
   gap: 6px;
 }
 
-/* ── Field groups (collapsible sections) ── */
-/* NOTE: No overflow:hidden here — Firefox clips <details> content inside flex
-   when the parent has overflow:hidden. Border-radius applied to children. */
+/* ── Field groups (collapsible) ── */
+/* No overflow:hidden — Firefox clips <details> inside flex when parent has it */
 .field-group {
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -147,15 +111,13 @@ details.field-group > summary {
   display: flex;
   align-items: center;
   gap: 8px;
-  border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
-  /* Rounded bottom corners when collapsed (no open content below) */
-  border-bottom: none;
+  border-radius: calc(var(--radius) - 1px);
   transition: background 0.12s;
 }
 
-/* When collapsed, round all corners */
-details.field-group:not([open]) > summary {
-  border-radius: calc(var(--radius) - 1px);
+details.field-group[open] > summary {
+  border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
+  border-bottom: 1px solid var(--border);
 }
 
 details.field-group > summary:hover { background: var(--border); }
@@ -163,17 +125,7 @@ details.field-group > summary:hover { background: var(--border); }
 details.field-group > summary::marker,
 details.field-group > summary::-webkit-details-marker { display: none; }
 
-/* Divider between summary and content when open */
-details.field-group[open] > summary {
-  border-bottom: 1px solid var(--border);
-}
-
-.section-icon {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  opacity: 0.7;
-}
+.section-icon { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.7; }
 
 .chevron {
   margin-left: auto;
@@ -241,47 +193,29 @@ details.field-group[open] > summary .chevron { transform: rotate(90deg); }
 
 @media (prefers-color-scheme: dark) {
   .field-row input:focus,
-  .field-row select:focus {
-    box-shadow: 0 0 0 2px rgba(124,106,247,.2);
-  }
+  .field-row select:focus { box-shadow: 0 0 0 2px rgba(124,106,247,.2); }
 }
 
 .field-row input[type="checkbox"] {
-  width: 17px;
-  height: 17px;
-  margin-top: 3px;
-  accent-color: var(--accent);
-  cursor: pointer;
+  width: 17px; height: 17px; margin-top: 3px;
+  accent-color: var(--accent); cursor: pointer;
 }
 
-/* ── Notes section ── */
-#fields-form > div.field-group {
-  padding: 10px 12px;
-}
+/* ── Notes ── */
+#fields-form > div.field-group { padding: 10px 12px; }
 
 #fields-form > div.field-group label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  display: block;
-  margin-bottom: 5px;
+  font-size: 11px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  display: block; margin-bottom: 5px;
 }
 
 #field-notes {
-  width: 100%;
-  padding: 7px 9px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  color: var(--text);
-  font-size: 13px;
-  resize: vertical;
-  outline: none;
-  font-family: inherit;
+  width: 100%; padding: 7px 9px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 5px; color: var(--text); font-size: 13px;
+  resize: vertical; outline: none; font-family: inherit;
 }
-
 #field-notes:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(79,63,212,.15); }
 
 /* ── Action bar ── */
@@ -295,7 +229,7 @@ details.field-group[open] > summary .chevron { transform: rotate(90deg); }
   flex-shrink: 0;
 }
 
-/* 2×2 grid: each button ~50% width, allowing icon + label to breathe */
+/* 2×2 layout so each button has room for icon + label */
 .action-bar button {
   flex: 1 0 calc(50% - 3px);
   padding: 8px 10px;
@@ -320,68 +254,113 @@ details.field-group[open] > summary .chevron { transform: rotate(90deg); }
 .action-bar button:hover img { opacity: 1; }
 
 .action-bar button.btn-primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-text);
-  font-weight: 700;
+  background: var(--accent); border-color: var(--accent);
+  color: var(--accent-text); font-weight: 700;
 }
-
 .action-bar button.btn-primary img { filter: brightness(0) invert(1); opacity: 1; }
 .action-bar button.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 .action-bar button:disabled { opacity: 0.4; cursor: default; }
 
-/* ── Garage panel ── */
-#panel-garage {
-  flex: 1;
-  min-height: 0;
+/* ── Garage — persistent bottom section ── */
+#garage-section {
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  border-top: 2px solid var(--border-strong);
+  background: var(--surface);
+  /* Slide-up animation via max-height on #panel-garage */
 }
 
-.garage-header {
-  background: var(--surface);
-  border-bottom: 2px solid var(--border);
+/* Toggle strip — always visible, acts as the garage handle */
+#garage-toggle {
+  width: 100%;
   padding: 11px 14px;
-  flex-shrink: 0;
+  background: var(--surface2);
+  border: none;
+  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 9px;
   font-size: 13px;
   font-weight: 700;
   color: var(--text2);
+  text-align: left;
+  transition: background 0.12s;
+  user-select: none;
+}
+
+#garage-toggle img { width: 16px; height: 16px; opacity: 0.65; flex-shrink: 0; }
+#garage-toggle:hover { background: var(--border); }
+#garage-toggle:hover img { opacity: 0.9; }
+
+/* Chevron in the toggle strip */
+#garage-toggle .garage-chevron {
+  margin-left: auto;
+  font-size: 11px;
+  opacity: 0.5;
+  transition: transform 0.2s;
+}
+
+/* When open, chevron flips to point down */
+#garage-section.open #garage-toggle .garage-chevron { transform: rotate(180deg); }
+#garage-section.open #garage-toggle { background: var(--surface); }
+
+/* Garage panel — collapsed by default, opens to fixed height */
+#panel-garage {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.22s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+#garage-section.open #panel-garage {
+  max-height: var(--garage-open-height);
+}
+
+/* Internal structure rendered by garage.js */
+.garage-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 9px 14px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.07em;
 }
-
-.garage-header img { width: 16px; height: 16px; opacity: 0.65; }
+.garage-header img { width: 14px; height: 14px; opacity: 0.6; }
 
 .garage-actions {
   display: flex;
   gap: 6px;
-  padding: 10px 14px;
+  padding: 8px 14px;
   background: var(--surface2);
-  border-bottom: 2px solid var(--border);
+  border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
   flex-shrink: 0;
 }
 
 .garage-actions button {
-  padding: 7px 12px;
+  padding: 6px 11px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--text2);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   transition: background 0.12s, border-color 0.12s;
   white-space: nowrap;
 }
-
-.garage-actions button img { width: 14px; height: 14px; opacity: 0.65; flex-shrink: 0; }
+.garage-actions button img { width: 13px; height: 13px; opacity: 0.65; flex-shrink: 0; }
 .garage-actions button:hover { background: var(--border); border-color: var(--border-strong); color: var(--text); }
 .garage-actions button:hover img { opacity: 1; }
 
@@ -395,7 +374,7 @@ details.field-group[open] > summary .chevron { transform: rotate(90deg); }
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 10px 14px;
+  padding: 8px 14px;
 }
 
 .garage-table {
@@ -406,7 +385,7 @@ details.field-group[open] > summary .chevron { transform: rotate(90deg); }
 
 .garage-table th {
   text-align: left;
-  padding: 5px 7px;
+  padding: 4px 6px;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
@@ -416,7 +395,7 @@ details.field-group[open] > summary .chevron { transform: rotate(90deg); }
 }
 
 .garage-table td {
-  padding: 8px 7px;
+  padding: 7px 6px;
   border-bottom: 1px solid var(--border);
   color: var(--text);
   vertical-align: middle;
@@ -425,7 +404,7 @@ details.field-group[open] > summary .chevron { transform: rotate(90deg); }
 .garage-table tr:hover td { background: var(--surface2); }
 
 .btn-delete {
-  padding: 4px 8px;
+  padding: 3px 7px;
   font-size: 11px;
   background: none;
   border: 1px solid var(--border);
@@ -442,15 +421,11 @@ details.field-group[open] > summary .chevron { transform: rotate(90deg); }
 .btn-delete:hover img { opacity: 1; }
 
 .empty-msg {
-  color: var(--muted);
-  font-size: 13px;
-  padding: 24px 0;
-  text-align: center;
+  color: var(--muted); font-size: 13px;
+  padding: 20px 0; text-align: center;
 }
 
 .garage-count {
-  color: var(--muted);
-  font-size: 12px;
-  padding: 8px 0;
-  text-align: right;
+  color: var(--muted); font-size: 12px;
+  padding: 6px 0; text-align: right;
 }
