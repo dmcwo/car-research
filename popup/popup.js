@@ -174,37 +174,13 @@ function runExtraction() {
     var tab = tabs[0];
     if (!tab) { showError('No active tab found.'); return; }
 
-    // Fetch the bundle from the extension itself, then inject + execute in a
-    // single func call. This avoids all cross-call state-sharing issues with
-    // the files-based injection approach in Firefox.
-    fetch(browser.runtime.getURL('content/bundle.js'))
-      .then(function(resp) { return resp.text(); })
-      .then(function(bundleCode) {
-        return browser.scripting.executeScript({
-          target: { tabId: tab.id },
-          func: function(code) {
-            try {
-              // Run the bundle code, which sets window.__carResearchResult
-              // eslint-disable-next-line no-new-func
-              (new Function(code))();
-              return window.__carResearchResult || {
-                _fatal: 'bundle ran but did not set __carResearchResult'
-              };
-            } catch(e) {
-              return {
-                _fatal: 'bundle threw: ' + e.message + '\n' + (e.stack || ''),
-                _pageInfo: {
-                  hasNextData: !!document.getElementById('__NEXT_DATA__'),
-                  jsonLdCount: document.querySelectorAll('script[type="application/ld+json"]').length,
-                  title: document.title.slice(0, 120),
-                  hostname: window.location.hostname
-                }
-              };
-            }
-          },
-          args: [bundleCode]
-        });
-      })
+    // Pass carResearchExtract (defined in bundle-func.js) directly as func.
+    // Firefox serializes the function and injects it as a real content script,
+    // bypassing page CSP — no eval or new Function needed.
+    browser.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: carResearchExtract
+    })
       .then(function(results) {
         var record = results && results[0] && results[0].result;
 

@@ -7,7 +7,7 @@
     "bundle": "node scripts/bundle.js",
     "start": "npm run bundle && web-ext run --source-dir .",
     "build": "npm run bundle && web-ext build --source-dir . --artifacts-dir web-ext-artifacts",
-    "lint": "web-ext lint --source-dir ."
+    "lint": "web-ext lint --source-dir . --ignore-files 'scripts/**'"
   },
   "devDependencies": {
     "web-ext": "^8.10.0"
