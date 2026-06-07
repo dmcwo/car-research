@@ -8,6 +8,9 @@ var _debug = { site: null, siteError: null, jsonldError: null, heuristicError: n
 var _pageInfo = {
   hasNextData: !!document.getElementById('__NEXT_DATA__'),
   jsonLdCount: document.querySelectorAll('script[type="application/ld+json"]').length,
+  jsonLdTypes: Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(function(s) {
+    try { var d = JSON.parse(s.textContent); return d['@type'] || '?'; } catch(e) { return 'parse-err'; }
+  }),
   title: document.title.slice(0, 120),
   hostname: hostname
 };
