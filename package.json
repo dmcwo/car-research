@@ -1,0 +1,14 @@
+{
+  "name": "car-research",
+  "version": "1.0.0",
+  "description": "Firefox extension for car research and comparison shopping",
+  "private": true,
+  "scripts": {
+    "start": "web-ext run --source-dir .",
+    "build": "web-ext build --source-dir . --artifacts-dir web-ext-artifacts",
+    "lint": "web-ext lint --source-dir ."
+  },
+  "devDependencies": {
+    "web-ext": "^8.10.0"
+  }
+}
