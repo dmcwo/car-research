@@ -345,7 +345,7 @@ function carResearchExtract() {
     'Volvo':      ['Ultimate','Plus','Core','Recharge','B5','B6','T8','T6','T5']
   };
   
-  // Parse year/make/model/condition from any text string
+  // Parse year/make/model/condition/bodyStyle from any text string
   function parseTitleText(text) {
     var result = {};
     if (!text) return result;
@@ -357,6 +357,15 @@ function carResearchExtract() {
     else if (/\bcertified\b|\bcpo\b/i.test(text)) result.condition = 'CPO';
     else if (/\bused\b/i.test(text)) result.condition = 'Used';
   
+    // Body style from title (Edmunds/NHTSA format: "Sport Utility 4D", "Sedan 4D", etc.)
+    if (/sport.utility/i.test(text)) result.bodyStyle = 'SUV';
+    else if (/\bhatchback\b/i.test(text)) result.bodyStyle = 'Hatchback';
+    else if (/\bconvertible\b|\bcabriolet\b/i.test(text)) result.bodyStyle = 'Convertible';
+    else if (/\bwagon\b/i.test(text)) result.bodyStyle = 'Wagon';
+    else if (/\bcoupe\b/i.test(text)) result.bodyStyle = 'Coupe';
+    else if (/\bsedan\b/i.test(text)) result.bodyStyle = 'Sedan';
+    else if (/\bpickup\b|\bcrew cab\b|\bextended cab\b/i.test(text)) result.bodyStyle = 'Truck';
+  
     for (var i = 0; i < KNOWN_MAKES.length; i++) {
       var makePattern = KNOWN_MAKES[i].replace('-', '[-\\s]?');
       var makeRegex = new RegExp('\\b' + makePattern + '\\b', 'i');
@@ -364,7 +373,7 @@ function carResearchExtract() {
         result.make = KNOWN_MAKES[i];
         var afterMake = text.replace(new RegExp('^.*?' + makePattern + '\\s*', 'i'), '');
         // Grab up to 3 words for model (handles "Prius c", "Model 3", "Elantra N Line")
-        var modelMatch = afterMake.match(/^([\w][\w\-]*(?:\s+[\w][\w\-]*){0,2}?)(?=\s*(?:\||in\s|–|-\s|\d{5}|$))/i);
+        var modelMatch = afterMake.match(/^([\w][\w\-]*(?:\s+[\w][\w\-]*){0,2}?)(?=\s*(?:\||in\s|–|-\s|\d{5}|Sport Utility|Sedan|Hatchback|Coupe|$))/i);
         if (modelMatch && modelMatch[1].trim()) {
           result.model = modelMatch[1].trim();
         } else {
@@ -440,6 +449,9 @@ function carResearchExtract() {
       Object.assign(result, titleParsed);
   
       var bodyText = document.body.innerText || '';
+      // Limit to first ~5000 chars for trim/mileage to avoid "similar cars" noise.
+      // MPG, drivetrain, fuel type are usually near the top; trim labels too.
+      var bodyHead = bodyText.slice(0, 5000);
   
       // Price
       var priceMatches = bodyText.match(/\$\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/g);
@@ -450,10 +462,13 @@ function carResearchExtract() {
         }
       }
   
-      // Mileage
-      var mileageMatch = bodyText.match(/(\d{1,3}(?:,\d{3})*)\s*(?:miles?|mi\.?)\b/i);
-      if (mileageMatch) {
-        var m = parseMileage(mileageMatch[1]);
+      // Mileage — prefer labeled pattern "Mileage: 14,000" or "14,000 miles"
+      // Search in bodyHead first to avoid picking up similar-car mileage at page bottom
+      var mileageLabelMatch = bodyHead.match(/(?:mileage|odometer)[:\s]+(\d{1,3}(?:,\d{3})*)/i);
+      var mileagePlainMatch = bodyHead.match(/(\d{1,3}(?:,\d{3})*)\s*(?:miles?|mi\.?)\b/i);
+      var rawMileage = mileageLabelMatch ? mileageLabelMatch[1] : (mileagePlainMatch ? mileagePlainMatch[1] : null);
+      if (rawMileage) {
+        var m = parseMileage(rawMileage);
         if (m && m < 500000) result.mileage = m;
       }
   
@@ -461,50 +476,77 @@ function carResearchExtract() {
       var vinMatch = bodyText.match(/\b([A-HJ-NPR-Z0-9]{17})\b/);
       if (vinMatch) result.vin = vinMatch[1];
   
-      // MPG / eMPG
-      var mpg = extractMpgFromText(bodyText);
+      // MPG / eMPG — also try labeled pattern "Est. 31 city / 33 hwy MPG"
+      var mpg = extractMpgFromText(bodyHead);
       if (mpg.mpgCity) result.mpgCity = mpg.mpgCity;
       if (mpg.mpgHighway) result.mpgHighway = mpg.mpgHighway;
       if (mpg.mpgCombined) result.mpgCombined = mpg.mpgCombined;
   
-      // Fuel type
-      if (!result.fuelType) {
-        if (/plug.in hybrid|phev/i.test(bodyText)) result.fuelType = 'PHEV';
-        else if (/\bhybrid\b/i.test(bodyText)) result.fuelType = 'Hybrid';
-        else if (/\belectric\b|\bev\b|\bbattery.electric/i.test(bodyText)) result.fuelType = 'Electric';
-        else if (/\bdiesel\b/i.test(bodyText)) result.fuelType = 'Diesel';
+      // Fuel type — check for labeled pattern first, then keyword
+      var fuelLabelMatch = bodyHead.match(/fuel\s*type[:\s]+([^\n,]{3,30})/i);
+      if (fuelLabelMatch) {
+        result.fuelType = normalizeFuelType(fuelLabelMatch[1]);
+      } else if (!result.fuelType) {
+        if (/plug.in hybrid|phev/i.test(bodyHead)) result.fuelType = 'PHEV';
+        else if (/\bhybrid\b/i.test(bodyHead)) result.fuelType = 'Hybrid';
+        else if (/\belectric\b|\bev\b|\bbattery.electric/i.test(bodyHead)) result.fuelType = 'Electric';
+        else if (/\bdiesel\b/i.test(bodyHead)) result.fuelType = 'Diesel';
+        else if (/\bgasoline\b|\bgas\b/i.test(bodyHead)) result.fuelType = 'Gasoline';
       }
   
-      // Drivetrain
-      if (!result.drivetrain) {
-        if (/\bAWD\b|all.wheel drive/i.test(bodyText)) result.drivetrain = 'AWD';
-        else if (/\b4WD\b|\b4x4\b|four.wheel drive/i.test(bodyText)) result.drivetrain = '4WD';
-        else if (/\bRWD\b|rear.wheel drive/i.test(bodyText)) result.drivetrain = 'RWD';
-        else if (/\bFWD\b|front.wheel drive/i.test(bodyText)) result.drivetrain = 'FWD';
+      // Drivetrain — labeled pattern first
+      var driveLabel = bodyHead.match(/(?:drivetrain|drive\s*type|drive)[:\s]+([^\n,]{3,25})/i);
+      if (driveLabel) {
+        result.drivetrain = normalizeDrivetrain(driveLabel[1]);
+      } else if (!result.drivetrain) {
+        if (/\bAWD\b|all.wheel drive/i.test(bodyHead)) result.drivetrain = 'AWD';
+        else if (/\b4WD\b|\b4x4\b|four.wheel drive/i.test(bodyHead)) result.drivetrain = '4WD';
+        else if (/\bRWD\b|rear.wheel drive/i.test(bodyHead)) result.drivetrain = 'RWD';
+        else if (/\bFWD\b|front.wheel drive/i.test(bodyHead)) result.drivetrain = 'FWD';
       }
   
-      // Transmission
-      if (!result.transmission) {
-        if (/\bCVT\b/i.test(bodyText)) result.transmission = 'CVT';
-        else if (/\bautomatic\b/i.test(bodyText)) result.transmission = 'Automatic';
-        else if (/\bmanual\b|\bstick shift\b/i.test(bodyText)) result.transmission = 'Manual';
+      // Transmission — labeled pattern first
+      var transLabel = bodyHead.match(/transmission[:\s]+([^\n,]{3,30})/i);
+      if (transLabel) {
+        result.transmission = normalizeTransmission(transLabel[1]);
+      } else if (!result.transmission) {
+        if (/\bCVT\b/i.test(bodyHead)) result.transmission = 'CVT';
+        else if (/\bautomatic\b/i.test(bodyHead)) result.transmission = 'Automatic';
+        else if (/\bmanual\b|\bstick shift\b/i.test(bodyHead)) result.transmission = 'Manual';
       }
   
-      // Trim — use make-specific dictionary against full page text
-      if (!result.trim && result.make) {
-        result.trim = extractTrimFromText(bodyText, result.make);
+      // Trim — labeled pattern first ("Trim: XLE"), then dictionary on bodyHead only
+      // Using bodyHead (not full bodyText) avoids similar-car trims at page bottom
+      var trimLabel = bodyHead.match(/\btrim[:\s]+([^\n,]{1,30})/i);
+      if (trimLabel) {
+        result.trim = trimLabel[1].trim();
+      } else if (!result.trim && result.make) {
+        result.trim = extractTrimFromText(bodyHead, result.make);
       }
   
-      // Body style
-      if (!result.bodyStyle) {
-        if (/\bSUV\b/i.test(bodyText)) result.bodyStyle = 'SUV';
-        else if (/\btruck\b|\bpickup\b/i.test(bodyText)) result.bodyStyle = 'Truck';
-        else if (/\bsedan\b/i.test(bodyText)) result.bodyStyle = 'Sedan';
-        else if (/\bhatchback\b/i.test(bodyText)) result.bodyStyle = 'Hatchback';
-        else if (/\bcoupe\b/i.test(bodyText)) result.bodyStyle = 'Coupe';
-        else if (/\bconvertible\b/i.test(bodyText)) result.bodyStyle = 'Convertible';
-        else if (/\bwagon\b/i.test(bodyText)) result.bodyStyle = 'Wagon';
-        else if (/\bvan\b|\bminivan\b/i.test(bodyText)) result.bodyStyle = 'Van';
+      // Body style — check labeled pattern, then keywords.
+      // Order matters: "Sport Utility" before "truck" (nav menus often say "Cars & Trucks")
+      var bodyStyleLabel = bodyHead.match(/body\s*(?:style|type)[:\s]+([^\n,]{3,25})/i);
+      if (bodyStyleLabel) {
+        var bs = bodyStyleLabel[1].trim();
+        if (/sport.utility|suv|crossover/i.test(bs)) result.bodyStyle = 'SUV';
+        else if (/pickup|truck/i.test(bs)) result.bodyStyle = 'Truck';
+        else if (/hatchback/i.test(bs)) result.bodyStyle = 'Hatchback';
+        else if (/sedan/i.test(bs)) result.bodyStyle = 'Sedan';
+        else if (/coupe/i.test(bs)) result.bodyStyle = 'Coupe';
+        else if (/convertible|cabriolet/i.test(bs)) result.bodyStyle = 'Convertible';
+        else if (/wagon/i.test(bs)) result.bodyStyle = 'Wagon';
+        else if (/van|minivan/i.test(bs)) result.bodyStyle = 'Van';
+        else result.bodyStyle = bs;
+      } else if (!result.bodyStyle) {
+        if (/sport.utility|\bSUV\b|\bcrossover\b/i.test(bodyHead)) result.bodyStyle = 'SUV';
+        else if (/\bminivan\b|\bvan\b/i.test(bodyHead)) result.bodyStyle = 'Van';
+        else if (/\bhatchback\b/i.test(bodyHead)) result.bodyStyle = 'Hatchback';
+        else if (/\bconvertible\b|\bcabriolet\b/i.test(bodyHead)) result.bodyStyle = 'Convertible';
+        else if (/\bwagon\b/i.test(bodyHead)) result.bodyStyle = 'Wagon';
+        else if (/\bcoupe\b/i.test(bodyHead)) result.bodyStyle = 'Coupe';
+        else if (/\bsedan\b/i.test(bodyHead)) result.bodyStyle = 'Sedan';
+        else if (/crew cab|extended cab|\bpickup\b/i.test(bodyHead)) result.bodyStyle = 'Truck';
       }
   
       result._titleHint = titleText;
