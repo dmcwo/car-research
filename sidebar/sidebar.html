@@ -8,25 +8,25 @@
 </head>
 <body>
 
-  <div class="tabs">
-    <button id="tab-extract" class="tab active">This Listing</button>
-    <button id="tab-garage"  class="tab">Garage (0)</button>
-  </div>
-
-  <!-- Extraction panel -->
+  <!-- Extraction panel — takes all available height -->
   <div id="panel-extract">
     <div id="status" class="status loading">Initializing…</div>
     <div id="fields-form"></div>
     <div class="action-bar">
-      <button id="btn-copy-csv" title="Copy a CSV row (headers + values) to clipboard">Copy CSV</button>
-      <button id="btn-download-csv" title="Download as CSV file">↓ CSV</button>
+      <button id="btn-copy-csv"      title="Copy a CSV row to clipboard">Copy CSV</button>
+      <button id="btn-download-csv"  title="Download as CSV file">↓ CSV</button>
       <button id="btn-download-json" title="Download as JSON file">↓ JSON</button>
-      <button id="btn-save" class="btn-primary" title="Save to Garage for later export">Save to Garage</button>
+      <button id="btn-save" class="btn-primary" title="Save to Garage">Save to Garage</button>
     </div>
   </div>
 
-  <!-- Garage panel -->
-  <div id="panel-garage" hidden></div>
+  <!-- Garage — persistent bottom strip, expands upward -->
+  <div id="garage-section">
+    <button id="garage-toggle" aria-expanded="false">
+      <!-- icon, label, and chevron injected by JS -->
+    </button>
+    <div id="panel-garage"></div>
+  </div>
 
   <script src="../shared/model.js"></script>
   <script src="../shared/constants.js"></script>
