@@ -174,23 +174,32 @@ function runExtraction() {
     var tab = tabs[0];
     if (!tab) { showError('No active tab found.'); return; }
 
-    var filesToInject = ['content/bundle.js'];
-
+    // Step 1: inject the bundle (stores result on window.__carResearchResult)
     browser.scripting.executeScript({
       target: { tabId: tab.id },
-      files: filesToInject
+      files: ['content/bundle.js']
+    }).then(function() {
+
+      // Step 2: retrieve the result via func — func return values are
+      // reliably captured in Firefox regardless of files injection behavior
+      return browser.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: function() {
+          return window.__carResearchResult || { _fatal: 'bundle.js did not set window.__carResearchResult — script may not have run' };
+        }
+      });
+
     }).then(function(results) {
       var record = results && results[0] && results[0].result;
 
       if (!record) {
-        showError('Extraction returned no data. Open the browser console (F12) on this page and look for [car-research] errors.');
+        showDiag('func retrieval returned null — scripting.executeScript may be blocked on this page. ' +
+          'Try: right-click the page → Inspect → Console tab for errors.');
         return;
       }
 
-      // Fatal error in content script
       if (record._fatal) {
-        showError('Extraction error: ' + record._fatal);
-        // Still populate URL at minimum
+        showDiag('Extraction error: ' + record._fatal, record._pageInfo);
         currentRecord = record;
         populateForm(record);
         return;
@@ -199,27 +208,44 @@ function runExtraction() {
       currentRecord = record;
       populateForm(record);
 
-      // Build status message from debug info
       var dbg = record._debug || {};
+      var pi = record._pageInfo || {};
       var fieldsFound = ['year','make','model','price','mileage'].filter(function(f) {
         return record[f] != null && record[f] !== '';
       });
 
-      if (dbg.siteError) {
-        status.textContent = 'Site extractor (' + dbg.site + ') failed — used fallback. ' +
-          'Error: ' + dbg.siteError.split('\n')[0];
-        status.className = 'status error';
-      } else if (fieldsFound.length === 0) {
-        status.textContent = 'Extracted URL only — no vehicle data found on this page. Try scrolling to load content, then reopen.';
-        status.className = 'status error';
+      if (fieldsFound.length === 0) {
+        showDiag(
+          'No vehicle data found. Extractor: ' + (dbg.site || 'generic') +
+          ' | __NEXT_DATA__: ' + pi.hasNextData +
+          ' | JSON-LD scripts: ' + pi.jsonLdCount +
+          (dbg.siteError ? ' | Error: ' + dbg.siteError.split('\n')[0] : ''),
+          pi
+        );
       } else {
-        status.textContent = 'Extracted via ' + (dbg.site || 'generic') + ' — ' + fieldsFound.length + ' core fields found. Review and edit below.';
-        status.className = 'status success';
+        status.textContent = 'Extracted via ' + (dbg.site || 'generic') +
+          ' — ' + fieldsFound.length + ' core fields found.' +
+          (dbg.siteError ? ' (fallback used)' : '');
+        status.className = dbg.siteError ? 'status warning' : 'status success';
       }
+
     }).catch(function(err) {
-      showError('Script injection failed: ' + err.message + ' — check browser console for details.');
+      showDiag('Injection failed: ' + err.message);
     });
   });
+}
+
+function showDiag(msg, pageInfo) {
+  var status = document.getElementById('status');
+  var text = msg;
+  if (pageInfo) {
+    text += '\n\nPage info: __NEXT_DATA__=' + pageInfo.hasNextData +
+      ', JSON-LD count=' + pageInfo.jsonLdCount +
+      '\nTitle: ' + pageInfo.title;
+  }
+  status.textContent = text;
+  status.className = 'status error';
+  status.style.whiteSpace = 'pre-wrap';
 }
 
 function showError(msg) {

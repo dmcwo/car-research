@@ -57,9 +57,10 @@ body {
   font-size: 12px;
   border-bottom: 1px solid var(--border);
 }
-.status.loading { color: var(--muted); }
-.status.success { color: var(--success); }
-.status.error   { color: var(--error); }
+.status.loading  { color: var(--muted); }
+.status.success  { color: var(--success); }
+.status.warning  { color: #e0a030; }
+.status.error    { color: var(--error); white-space: pre-wrap; }
 
 /* Field form */
 #fields-form {
