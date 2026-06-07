@@ -119,8 +119,15 @@ function buildForm() {
   // Notes
   var notesSection = document.createElement('div');
   notesSection.className = 'field-group';
-  notesSection.innerHTML = '<label for="field-notes">Notes</label>' +
-    '<textarea id="field-notes" rows="3" placeholder="Personal notes..."></textarea>';
+  var notesLabel = document.createElement('label');
+  notesLabel.setAttribute('for', 'field-notes');
+  notesLabel.textContent = 'Notes';
+  var notesArea = document.createElement('textarea');
+  notesArea.id = 'field-notes';
+  notesArea.rows = 3;
+  notesArea.placeholder = 'Personal notes...';
+  notesSection.appendChild(notesLabel);
+  notesSection.appendChild(notesArea);
   form.appendChild(notesSection);
 }
 
@@ -189,13 +196,43 @@ function runExtraction() {
       files: filesToInject
     }).then(function(results) {
       var record = results && results[0] && results[0].result;
-      if (!record) { showError('Could not extract data from this page.'); return; }
+
+      if (!record) {
+        showError('Extraction returned no data. Open the browser console (F12) on this page and look for [car-research] errors.');
+        return;
+      }
+
+      // Fatal error in content script
+      if (record._fatal) {
+        showError('Extraction error: ' + record._fatal);
+        // Still populate URL at minimum
+        currentRecord = record;
+        populateForm(record);
+        return;
+      }
+
       currentRecord = record;
       populateForm(record);
-      status.textContent = 'Data extracted — review and edit below.';
-      status.className = 'status success';
+
+      // Build status message from debug info
+      var dbg = record._debug || {};
+      var fieldsFound = ['year','make','model','price','mileage'].filter(function(f) {
+        return record[f] != null && record[f] !== '';
+      });
+
+      if (dbg.siteError) {
+        status.textContent = 'Site extractor (' + dbg.site + ') failed — used fallback. ' +
+          'Error: ' + dbg.siteError.split('\n')[0];
+        status.className = 'status error';
+      } else if (fieldsFound.length === 0) {
+        status.textContent = 'Extracted URL only — no vehicle data found on this page. Try scrolling to load content, then reopen.';
+        status.className = 'status error';
+      } else {
+        status.textContent = 'Extracted via ' + (dbg.site || 'generic') + ' — ' + fieldsFound.length + ' core fields found. Review and edit below.';
+        status.className = 'status success';
+      }
     }).catch(function(err) {
-      showError('Extraction failed: ' + err.message);
+      showError('Script injection failed: ' + err.message + ' — check browser console for details.');
     });
   });
 }
