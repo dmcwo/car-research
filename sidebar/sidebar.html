@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Car Research</title>
+  <link rel="stylesheet" href="sidebar.css">
+</head>
+<body>
+
+  <div class="tabs">
+    <button id="tab-extract" class="tab active">This Listing</button>
+    <button id="tab-garage"  class="tab">Garage (0)</button>
+  </div>
+
+  <!-- Extraction panel -->
+  <div id="panel-extract">
+    <div id="status" class="status loading">Initializing…</div>
+    <div id="fields-form"></div>
+    <div class="action-bar">
+      <button id="btn-copy-csv" title="Copy a CSV row (headers + values) to clipboard">Copy CSV</button>
+      <button id="btn-download-csv" title="Download as CSV file">↓ CSV</button>
+      <button id="btn-download-json" title="Download as JSON file">↓ JSON</button>
+      <button id="btn-save" class="btn-primary" title="Save to Garage for later export">Save to Garage</button>
+    </div>
+  </div>
+
+  <!-- Garage panel -->
+  <div id="panel-garage" hidden></div>
+
+  <script src="../shared/model.js"></script>
+  <script src="../shared/constants.js"></script>
+  <script src="../content/bundle-func.js"></script>
+  <script src="../popup/export.js"></script>
+  <script src="../popup/garage.js"></script>
+  <script src="sidebar.js"></script>
+</body>
+</html>
