@@ -36,3 +36,7 @@ browser.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
     return true;
   }
 });
+
+browser.action.onClicked.addListener(function() {
+  browser.sidebarAction.toggle();
+});

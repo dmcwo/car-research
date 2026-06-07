@@ -21,14 +21,18 @@
   "background": {
     "scripts": ["background/service-worker.js"]
   },
+  "sidebar_action": {
+    "default_panel": "sidebar/sidebar.html",
+    "default_icon": { "48": "icons/icon-48.png" },
+    "default_title": "Car Research"
+  },
   "action": {
-    "default_popup": "popup/popup.html",
     "default_icon": {
       "16": "icons/icon-16.png",
       "48": "icons/icon-48.png",
       "128": "icons/icon-128.png"
     },
-    "default_title": "Car Research"
+    "default_title": "Car Research — click to toggle sidebar"
   },
   "icons": {
     "16": "icons/icon-16.png",
