@@ -72,7 +72,7 @@ var GROUP_ICONS = {
   'Listing':    'tag',
   'Appearance': 'palette',
   'History':    'history',
-  'Seller':     'store',
+  'Seller':     'user',
   'Meta':       'info'
 };
 
@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', function() {
   var tabExtract = document.getElementById('tab-extract');
   var tabGarage  = document.getElementById('tab-garage');
   tabExtract.insertBefore(icon('car', 15), tabExtract.firstChild);
-  tabGarage.insertBefore(icon('store', 15), tabGarage.firstChild);
+  tabGarage.insertBefore(icon('warehouse', 15), tabGarage.firstChild);
 
   runExtraction();
 
