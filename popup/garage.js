@@ -13,7 +13,7 @@ function garageIcon(name, size) {
   return img;
 }
 
-function renderGarage(garage, container, onDelete, onExportCsv, onExportJson, onClear) {
+function renderGarage(garage, container, onDelete, onExportCsv, onExportJson, onClear, onDashboard) {
   container.innerHTML = '';
 
   // ── Header bar ─────────────────────────────────────────────────────────────
@@ -29,9 +29,10 @@ function renderGarage(garage, container, onDelete, onExportCsv, onExportJson, on
   var actions = document.createElement('div');
   actions.className = 'garage-actions';
 
-  [['btn-export-garage-csv',  'download',  'Export CSV',  false],
-   ['btn-export-garage-json', 'file-json', 'Export JSON', false],
-   ['btn-clear-garage',       'trash-2',   'Clear All',   true]
+  [['btn-export-garage-csv',  'download',       'Export CSV',       false],
+   ['btn-export-garage-json', 'file-json',      'Export JSON',      false],
+   ['btn-dashboard',          'bar-chart-2',    'View in Dashboard',false],
+   ['btn-clear-garage',       'trash-2',        'Clear All',        true]
   ].forEach(function(def) {
     var btn = document.createElement('button');
     btn.id = def[0];
@@ -44,6 +45,7 @@ function renderGarage(garage, container, onDelete, onExportCsv, onExportJson, on
 
   document.getElementById('btn-export-garage-csv').onclick  = onExportCsv;
   document.getElementById('btn-export-garage-json').onclick = onExportJson;
+  document.getElementById('btn-dashboard').onclick          = onDashboard;
   document.getElementById('btn-clear-garage').onclick       = onClear;
 
   // ── Body (table or empty state) ─────────────────────────────────────────────

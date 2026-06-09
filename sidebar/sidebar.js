@@ -395,8 +395,18 @@ function refreshGarage() {
       function() {
         if (!confirm('Clear all ' + garageData.length + ' saved cars?')) return;
         browser.runtime.sendMessage({ type: 'CLEAR_GARAGE' }).then(refreshGarage);
+      },
+      function() {
+        openDashboard(garageData);
       }
     );
+  });
+}
+
+function openDashboard(cars) {
+  if (!cars || !cars.length) { showError('No saved cars to display.'); return; }
+  browser.storage.local.set({ dashboardData: cars }).then(function() {
+    browser.tabs.create({ url: browser.runtime.getURL('analysis/analysis.html') });
   });
 }
 

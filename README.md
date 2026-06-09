@@ -1,36 +1,42 @@
 # Car Research — Firefox Extension
 
-> **Experimental Prototype.** This extension was built as a proof-of-concept to explore AI-assisted browser tooling for car shopping research. It is not a finished product. Extractors may break when car websites update their layouts, and the extension has not been tested across every supported site. Use it as a starting point, not a polished tool.
+> **Experimental Prototype.** This extension was built as a proof-of-concept to explore AI-assisted browser tooling for car shopping research. It is not a finished product. Extractors may break when car websites update their layouts, and the extension has not been exhaustively tested across every supported site. Use it as a starting point, not a polished tool.
 
-A Firefox browser extension that helps you capture, compare, and export car listing data while you shop. Visit any car listing page, click the extension icon, review the extracted data, and export it as CSV or JSON for use in a spreadsheet.
+A Firefox browser extension that captures, organizes, and exports car listing data while you shop. Visit any car listing page, the sidebar opens beside the page and immediately extracts the key data — review and edit it, then export as CSV or JSON for analysis in a spreadsheet or dedicated tool.
 
 ---
 
 ## Features
 
-- **Extracts key listing data** — year, make, model, trim, price, mileage, VIN, MPG, fuel type, drivetrain, colors, seller info, Carfax summary, and more
-- **Editable fields** — review and correct anything the extractor missed before exporting
-- **Copy as CSV** — one click copies a formatted row to your clipboard for pasting directly into Google Sheets or Excel
-- **Download CSV or JSON** — save individual listings or your full garage as structured files
-- **Garage** — save listings locally across sessions; export everything at once when you're ready to compare
+- **Sidebar panel** — opens beside the page (not overlaid), so the listing is always readable alongside the extracted data
+- **Auto-extraction** — re-runs automatically when you navigate to a new listing or switch tabs; no button click needed
+- **Extracts 30+ fields** — year, make, model, trim, condition, price, mileage, VIN, MPG/eMPG, fuel type, engine, drivetrain, transmission, colors, seller info, Carfax summary, CPO flag, warranty, and more
+- **Controlled vocabulary** — Condition, Fuel Type, Body Style, and Seller Type use dropdowns; Make uses a typeahead input (type a few letters to filter from all known makes)
+- **Editable fields** — review and correct anything the extractor missed before saving or exporting
+- **Light and dark mode** — automatically follows your system preference
+- **Export options**
+  - **Copy CSV** — copies headers + values to clipboard (paste into Google Sheets or Excel)
+  - **↓ CSV** / **↓ JSON** — downloads a file for this listing
+  - **Save to Garage** — saves the listing locally for later bulk export
+- **Garage** — persistent bottom drawer (always visible); save listings across sessions, then export everything at once
 
 ### Supported Sites (with dedicated extractors)
 
 | Site | Extraction method |
 |---|---|
-| Carvana | `__NEXT_DATA__` JSON blob |
-| CarMax | `__NEXT_DATA__` JSON blob |
+| Carvana | DOM selectors with `__NEXT_DATA__` fallback |
+| CarMax | DOM selectors with `__NEXT_DATA__` fallback |
 | Cars.com | JSON-LD + DOM selectors |
 | AutoTrader | JSON-LD + preloaded state |
 | KBB | JSON-LD + CPO flag |
 | Craigslist | DOM selectors (private sellers) |
-| Any other site | Generic JSON-LD / Open Graph fallback, then heuristic DOM parsing |
+| Any other site | Generic JSON-LD / Open Graph, then heuristic DOM parsing |
 
 ---
 
 ## Installing in Firefox (Temporary Load)
 
-The extension is not yet published to the Firefox Add-ons store. To test it locally:
+The extension is not published to the Firefox Add-ons store. To test it locally:
 
 1. **Clone the repository**
 
@@ -47,11 +53,11 @@ The extension is not yet published to the Firefox Add-ons store. To test it loca
 
 3. Click **"Load Temporary Add-on…"**
 
-4. In the file picker, navigate to your cloned `car-research` folder and select **`manifest.json`**
+4. Select **`manifest.json`** from your cloned folder
 
-5. The Car Research extension will appear in your toolbar. It stays loaded until Firefox is closed.
+5. The Car Research icon appears in your toolbar. Click it to toggle the sidebar.
 
-> **Note:** Temporary add-ons are removed when Firefox closes. Repeat steps 2–4 each session, or use the `web-ext` method below for a smoother development experience.
+> **Note:** Temporary add-ons are removed when Firefox closes. Repeat steps 2–4 each session, or use the `web-ext` development method below.
 
 ---
 
@@ -69,75 +75,78 @@ The extension is not yet published to the Firefox Add-ons store. To test it loca
    npm start
    ```
 
-   This uses `web-ext run` to launch a Firefox instance with the extension loaded. Changes to source files reload the extension automatically.
-
-3. To lint the extension:
+3. To lint:
 
    ```bash
    npm run lint
    ```
 
+4. To rebuild `content/bundle-func.js` after editing any extractor source file:
+
+   ```bash
+   node scripts/bundle.js
+   ```
+
 ---
 
-## Testing the Extension
+## Using the Extension
 
-### Basic flow
+### Capturing a listing
 
-1. Navigate to a car listing on any supported site (e.g. a Carvana or Craigslist listing)
-2. Click the **Car Research** icon in the Firefox toolbar
-3. The popup opens and immediately attempts to extract data from the page
+1. Navigate to a car listing on any supported site
+2. Click the **Car Research** icon in the Firefox toolbar — the sidebar opens on the right side of the browser
+3. The extension automatically extracts data from the current page; the status bar shows what was found
 4. Review the extracted fields — edit anything that's wrong or missing
-5. Use the action buttons at the bottom:
-   - **Copy CSV** — copies headers + values to clipboard (paste into Google Sheets)
-   - **↓ CSV** — downloads a `.csv` file for this listing
-   - **↓ JSON** — downloads a `.json` file for this listing
-   - **Save to Garage** — saves the listing locally for later
+5. Use the action buttons:
+   - **Copy CSV** — copies headers + values to clipboard
+   - **↓ CSV** / **↓ JSON** — downloads a file for this listing
+   - **Save to Garage** — saves the listing locally for later export
 
-### Testing the Garage
+### Using the Garage
 
-1. Save a few listings using "Save to Garage"
-2. Click the **Garage** tab in the popup to see all saved cars
-3. Use **Export CSV** or **Export JSON** to download all saved listings at once
-4. Individual cars can be deleted with the ✕ button
+The **Garage** strip at the bottom of the sidebar shows how many cars you've saved. Click it to expand the garage drawer (the listing stays visible above it). The garage offers:
+- **Export CSV / Export JSON** — download all saved listings at once
+- **Clear All** — remove all saved cars
+- **✕ per row** — delete an individual car
 
-### Testing on an unsupported site
+### Navigating between listings
 
-Visit any dealer website not in the supported list above. The extension will fall back to generic JSON-LD parsing and heuristic DOM scanning — you'll likely get partial data (URL, maybe price and year/make/model). Fill in the rest manually before exporting.
+The sidebar automatically re-extracts when you navigate to a new URL on the same tab or switch to a different tab. You don't need to click anything — just navigate and the data updates.
 
 ### Debugging
 
-- **Popup JS errors**: Right-click the extension popup → Inspect → Console
-- **Content script errors**: Open the page's DevTools (F12) → Debugger → look under "Content Scripts"
+- **Sidebar JS errors**: Right-click anywhere in the sidebar → Inspect → Console
+- **Content script errors**: Open the page's DevTools (F12) → Console
 - **Reload after edits**: Go to `about:debugging` → find Car Research → click "Reload"
 
 ---
 
-## Data Fields Captured
+## Data Fields
 
 | Field | Description |
 |---|---|
 | year, make, model, trim | Core vehicle identity |
-| bodyStyle | Sedan, SUV, Truck, etc. |
+| bodyStyle | Sedan / SUV / Truck / Hatchback / Coupe / Convertible / Wagon / Van / Minivan |
 | condition | New / Used / CPO |
-| price | Listing price (number, no $ symbol) |
+| engine | Engine description (e.g. "2.5L 4-cyl") |
+| fuelType | Gasoline / Diesel / Hybrid / PHEV / Electric / Hydrogen |
+| mpgCity, mpgHighway, mpgCombined | Fuel economy (handles MPGe for EVs) |
+| drivetrain | FWD / AWD / RWD / 4WD |
+| transmission | Automatic / Manual / CVT |
+| price | Listing price (number) |
 | mileage | Odometer reading |
 | vin | 17-character VIN |
 | stockNumber | Dealer stock number |
-| fuelType | Gasoline / Electric / Hybrid / PHEV / Diesel |
-| mpgCity, mpgHighway, mpgCombined | Fuel economy |
-| engine | Engine description |
-| drivetrain | FWD / AWD / RWD / 4WD |
-| transmission | Automatic / Manual / CVT |
 | colorExterior, colorInterior | Paint and interior color |
 | owners | Number of previous owners |
-| accidentCount | Number of reported accidents |
-| carfaxSummary | Brief Carfax/history text |
-| isCertifiedPreOwned | CPO flag |
+| accidentCount | Reported accidents |
+| carfaxSummary | Brief history report text |
+| isCertifiedPreOwned | CPO flag (checkbox) |
 | warrantyInfo | Warranty description |
 | sellerName | Dealership or seller name |
-| sellerType | Dealer or Private |
+| sellerType | Dealer / Private |
 | sellerPhone, sellerLocation | Seller contact info |
-| daysOnLot | Days listed |
+| daysOnLot | Days the listing has been active |
 | websiteName | Source website |
 | url | Direct link to the listing |
 | dateScraped | ISO timestamp when captured |
@@ -147,11 +156,11 @@ Visit any dealer website not in the supported list above. The extension will fal
 
 ## Known Limitations
 
-- **Extractors are fragile.** Site-specific extractors depend on the structure of each website's HTML or embedded JSON. When a site redesigns or restructures its data, the extractor may silently return empty fields. Always review extracted data before exporting.
-- **JavaScript-heavy pages.** Some listings load data asynchronously. If the popup opens before the page finishes loading, extraction may be incomplete. Close the popup, wait for the page to fully load, and try again.
-- **Craigslist regional subdomains.** The Craigslist extractor handles all `*.craigslist.org` subdomains but listing HTML varies slightly by region.
+- **Extractors are fragile.** Site-specific extractors depend on the structure of each website's HTML or embedded JSON. When a site redesigns, the extractor may silently return partial data. Always review before exporting.
+- **JavaScript-heavy pages.** Some listings load data asynchronously. If the sidebar opens before the page finishes loading, extraction may miss fields. Navigate away and back — the sidebar re-extracts automatically on return.
+- **Carvana and CarMax.** Both sites appear to have moved away from exposing `__NEXT_DATA__` in the standard location. Extraction relies on DOM selectors, which may be less complete.
+- **Colors and owner count.** These are often not present in the main listing DOM and may need to be filled in manually.
 - **No Google Sheets sync yet.** Direct export to a designated Google Sheet is planned for a future version.
-- **Mileage on new cars.** New car listings typically show 0 or no mileage; this is expected.
 
 ---
 
@@ -159,10 +168,11 @@ Visit any dealer website not in the supported list above. The extension will fal
 
 ```
 car-research/
-├── manifest.json                  # Extension manifest (MV3)
+├── manifest.json                  # Extension manifest (MV3, Firefox)
 ├── background/
-│   └── service-worker.js          # Storage message bus
+│   └── service-worker.js          # Storage message bus + toolbar button handler
 ├── content/
+│   ├── bundle-func.js             # AUTO-GENERATED — do not edit directly
 │   ├── extract.js                 # Dispatcher: selects and runs the right extractor
 │   ├── extractors/
 │   │   ├── carvana.js
@@ -171,61 +181,149 @@ car-research/
 │   │   ├── autotrader.js
 │   │   ├── kbb.js
 │   │   ├── craigslist.js
-│   │   ├── generic-jsonld.js      # Fallback: JSON-LD / Open Graph
-│   │   └── generic-heuristic.js  # Fallback: regex + DOM patterns
+│   │   ├── generic-jsonld.js      # Tier 2 fallback: JSON-LD / Open Graph
+│   │   └── generic-heuristic.js  # Tier 3 fallback: regex + DOM heuristics
 │   └── utils/
 │       ├── dom-helpers.js
 │       ├── price-parser.js
 │       └── normalize.js
+├── sidebar/
+│   ├── sidebar.html               # Active UI (Firefox sidebarAction panel)
+│   ├── sidebar.css                # Adaptive light/dark styles
+│   └── sidebar.js                 # Sidebar controller
 ├── popup/
-│   ├── popup.html
-│   ├── popup.css
-│   ├── popup.js                   # Main popup controller
-│   ├── garage.js                  # Garage tab
-│   └── export.js                  # CSV / JSON export
-└── shared/
-    ├── model.js                   # CarRecord data model
-    └── constants.js               # Site → extractor mapping
+│   ├── export.js                  # CSV / JSON export utilities (shared with sidebar)
+│   ├── garage.js                  # Garage rendering (shared with sidebar)
+│   └── popup.*                    # Legacy popup files (not currently active)
+├── shared/
+│   ├── model.js                   # CarRecord data model + column order
+│   └── constants.js               # Site → extractor name mapping
+├── icons/
+│   ├── lucide/                    # Locally hosted Lucide SVG icons
+│   ├── icon-16.png
+│   ├── icon-48.png
+│   └── icon-128.png
+└── scripts/
+    ├── bundle.js                  # Concatenates extractor sources → bundle-func.js
+    └── extract-body.js            # Extraction dispatcher body (input to build)
 ```
 
 ---
 
 ## Creation Record
 
-**What this is:** This extension was designed and built in a single session using [Claude Code](https://claude.ai/code) (Anthropic's AI coding assistant), working from a conversational description of the desired user flow. No starter template or boilerplate was used — the repository was empty at the start of the session.
+### What this is
 
-**Date:** June 7, 2026
+This extension was designed and built collaboratively using [Claude Code](https://claude.ai/code) (Anthropic's AI coding assistant), working from conversational descriptions of desired behavior and iterative user feedback on real listings. No starter template or boilerplate was used — the repository was empty at the start.
 
-**Model:** Claude (claude-sonnet-4-6), via Claude Code on the web
+**Date:** June 7, 2026  
+**Model:** claude-sonnet-4-6, via Claude Code on the web  
+**Human:** Doug Worsham ([@dmcwo](https://github.com/dmcwo))
 
-**Human role:** Doug Worsham provided the product concept, user flow, and feedback on the plan before implementation began. The session used plan mode — Claude drafted a detailed implementation plan, which was reviewed and approved before any code was written.
-
-**What was specified up front:**
-- User visits a car website, activates the extension, reviews extracted data, and exports as CSV/JSON
-- Fields to capture: make, model, trim, year, price, mileage, MPG/eMPG, new/used, link, seller/website name
-- Export targets: copy-paste CSV, downloadable CSV, downloadable JSON
-- Google Sheets integration flagged as a future version
-
-**What Claude contributed during design:**
-- Recommended a tiered extraction architecture (site-specific → JSON-LD → heuristic DOM) to balance accuracy and breadth
-- Expanded the data model to 30+ fields covering powertrain, history, seller, and metadata
-- Chose plain HTML/CSS/JS with no build step to keep the extension loadable without any toolchain
-- Selected `browser.storage.local` over IndexedDB for the Garage (simpler, sufficient for hundreds of records)
-- Designed the Garage tab as a second panel in the popup for cross-session persistence
-- Prioritized extractor sites by volume: Carvana and CarMax first (both use `__NEXT_DATA__` JSON), then Cars.com, AutoTrader, KBB, Craigslist
-
-**Implementation:** All 27 source files were written by Claude in sequence, then linted with `web-ext lint` (result: 0 errors, 0 warnings). One `innerHTML` security warning was caught by the linter and fixed before the final commit.
-
-**Limitations of this approach:** The extractors are best-effort pattern matches against live websites. They have not been tested against real listings — only designed based on known patterns for each site. Some will likely need adjustment once tested against actual pages. This is expected for a prototype of this kind.
-
-**Session link:** [claude.ai/code](https://claude.ai/code/session_012LMfbsEve7RiSQLKRnxArg)
+The project was built across multiple Claude Code sessions. Each session was a conversation: Doug described what he wanted, Claude planned the implementation, then built while Doug tested on real listings and reported what was working and what wasn't.
 
 ---
 
-## Future Ideas
+### Phase 1 — Architecture and initial build
 
+Claude drafted a detailed implementation plan covering the data model (30+ fields), a tiered extraction architecture, and the full file structure. Doug reviewed and approved the plan before any code was written. The plan was preserved in Claude's plan mode file and is reflected in the commit history.
+
+**What was specified:**
+- User flow: visit a listing → activate extension → review extracted data → export as CSV/JSON
+- Core fields: make, model, trim, year, price, mileage, MPG/eMPG, new/used, link, seller info
+- Export targets: clipboard CSV, downloadable CSV/JSON; Google Sheets planned for v2
+
+**What Claude contributed during design:**
+- Tiered extraction (site-specific → JSON-LD → heuristic DOM) to balance accuracy and breadth
+- Expanded the data model beyond the initial spec to cover powertrain, history, seller, and metadata
+- Plain HTML/CSS/JS with no framework (extension loadable without any toolchain)
+- `browser.storage.local` for the Garage (simpler and sufficient; no IndexedDB complexity)
+- Prioritized extractors by volume: Carvana and CarMax first
+
+---
+
+### Phase 2 — Content script injection debugging
+
+The initial implementation failed silently: content scripts were injected but returned no data. Over several test-and-fix cycles with Doug running the extension on real pages and reporting console errors, two root causes were found:
+
+**Problem 1: Two `executeScript` calls don't share `window` state in Firefox MV3.**  
+The first call injected all extractor scripts; the second tried to read `window.__carResearchResult`. Firefox isolates them, so the second call saw an empty window. Fixed by wrapping all extractor code in a single named function (`carResearchExtract`) bundled into `content/bundle-func.js`, passing the function reference directly as `func:` to a single `executeScript` call.
+
+**Problem 2: Page CSP blocks `new Function()` even inside Firefox content scripts.**  
+CarMax and Carvana both set strict `script-src` policies. An earlier approach that built a function dynamically from injected code strings was blocked by the sandbox (`call to Function() blocked by CSP`). The fix: define `carResearchExtract` as a real named function in the bundle, load it in `sidebar.html`, and pass it by reference. Firefox serializes and re-executes it in the page context, bypassing CSP entirely.
+
+---
+
+### Phase 3 — Extraction accuracy improvements
+
+Doug tested on real CarMax and Carvana listings and reported specific inaccuracies:
+
+| Problem | Root cause | Fix |
+|---|---|---|
+| Make/model missing | Heuristic used first non-empty h1/h2/title; CarMax SPAs have non-car h1 | Try all candidates; merge results |
+| Trim "XLE Premium" instead of "L" | Trim dictionary searched full page body, matching similar-cars section at bottom | Limit scan to first 5,000 chars; prefer labeled patterns ("Trim: L") |
+| Body Style "Truck" instead of "SUV" | Nav menu "Cars, Trucks, SUVs" matched "truck" first | Check "Sport Utility"/"SUV" before "pickup/crew cab" |
+| Wrong mileage | First "X miles" in body text was a different number | Prefer labeled "Mileage: X,XXX" patterns; search `bodyHead` first |
+
+---
+
+### Phase 4 — Sidebar migration
+
+The popup opened in the top-right corner of the browser, directly over the area where car sites display the listing's core info (make, model, price, mileage). Doug flagged this as a usability problem.
+
+Claude evaluated three options — sidebar, injected in-page panel, smaller popup — and recommended Firefox's `sidebarAction` API, which pushes page content inward rather than overlaying it. The sidebar persists across navigation and auto-re-extracts when the user navigates to a new listing (`browser.tabs.onUpdated`) or switches tabs (`browser.tabs.onActivated`).
+
+---
+
+### Phase 5 — UI and UX overhaul
+
+Several rounds of improvements based on Doug's feedback after seeing the extension in use:
+
+**Visual design:**
+- Light mode by default (was dark-only); dark mode via `prefers-color-scheme`
+- Font sizes increased (14px body, 12px section headers, 11px field labels)
+- Higher contrast; visible focus rings on inputs
+- Lucide SVG icons (locally hosted) on action buttons, section headers, and garage strip
+- Distinct icons: car (listing), warehouse (garage), user (seller section)
+
+**Section structure:**
+- Powertrain section dissolved into Vehicle (Engine, Fuel Type, MPG, Drivetrain, Transmission moved up)
+- Listing section moved immediately after Vehicle
+- Section collapse bars enlarged and given hover state and open/closed indicator
+- Action buttons arranged 2×2 (was one row; icon + label didn't fit)
+
+**Critical bug fix:**  
+`overflow: hidden` on `<details>` elements inside Firefox flex containers clips the expanded content to the pre-open height. Removed it; applied border-radius directly to `<summary>` instead.
+
+**Controlled vocabulary:**  
+`<select>` dropdowns for Condition, Fuel Type, Body Style, Seller Type. `<datalist>` typeahead for Make.
+
+**Garage redesign:**  
+Converted from a tab (which fully replaced the listing view) to a persistent bottom drawer that expands/collapses in place. The listing is always visible above it. Also fixed the underlying dismiss bug: `display: flex` in CSS was overriding the `hidden` HTML attribute, so the garage panel never actually hid when switching back to the listing tab.
+
+---
+
+### Technical notes
+
+- **No eval / dynamic code**: All extractor code is bundled at build time. The function is passed by reference, not constructed at runtime — compatible with strict CSP.
+- **Lint status**: `web-ext lint` reports 0 errors, 0 warnings.
+- **Branch workflow**: All development on `claude/dreamy-gates-QafdX`, merged to `main` via pull requests.
+- **Session link**: [claude.ai/code/session_012LMfbsEve7RiSQLKRnxArg](https://claude.ai/code/session_012LMfbsEve7RiSQLKRnxArg)
+
+---
+
+## Roadmap
+
+### Near-term
+- Improve color and owner count extraction (currently missing on most sites)
+- Better CarMax and Carvana field coverage
+- Publish to Firefox Add-ons (AMO)
+
+### Comparison and visualization layer
+See the discussion in project issues. The current CSV/JSON export is designed as a clean handoff to a dedicated analysis tool.
+
+### Future ideas
 - Google Sheets integration (OAuth + Sheets API v4 append)
-- Auto-detect when you navigate to a new listing and pre-load data
-- Price history tracking (save multiple snapshots of the same VIN)
-- Side-by-side comparison view within the Garage
-- Publish to Firefox Add-ons (AMO) with proper signing
+- Price history tracking (multiple snapshots per VIN)
+- Reliability ratings and cost-of-ownership estimates
+- Side-by-side comparison dashboard
